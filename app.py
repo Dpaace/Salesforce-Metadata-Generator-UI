@@ -35,7 +35,7 @@ def generate_metadata():
     return send_file(zip_path, as_attachment=True)
 
 @app.route('/')
-def index():
+def oauth():
     with open('templates/oauth.html') as f:
         html = f.read()
     # Inject the redirect_uri directly into the template
@@ -45,6 +45,9 @@ def index():
 def oauth_redirect():
     return open('templates/redirect.html').read()
 
+@app.route('/index')
+def index():
+    return open('templates/index.html').read()
 
 
 @app.route('/exchange-token', methods=['POST'])
@@ -68,6 +71,55 @@ def exchange_token():
     response = requests.post('https://login.salesforce.com/services/oauth2/token', data=payload)
 
     return jsonify(response.json())
+
+
+from flask import request, jsonify
+import requests
+
+@app.route('/deploy-to-salesforce', methods=['POST'])
+def deploy_to_salesforce():
+    data = request.json
+    access_token = data.get('access_token')
+    instance_url = data.get('instance_url')
+    zip_file = data.get('zip_file')
+
+    if not all([access_token, instance_url, zip_file]):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    soap_envelope = f"""
+    <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+      <env:Header>
+        <SessionHeader xmlns="http://soap.sforce.com/2006/04/metadata">
+          <sessionId>{access_token}</sessionId>
+        </SessionHeader>
+      </env:Header>
+      <env:Body>
+        <deploy xmlns="http://soap.sforce.com/2006/04/metadata">
+          <ZipFile>{zip_file}</ZipFile>
+          <DeployOptions>
+            <performRetrieve>false</performRetrieve>
+            <rollbackOnError>true</rollbackOnError>
+            <singlePackage>true</singlePackage>
+          </DeployOptions>
+        </deploy>
+      </env:Body>
+    </env:Envelope>
+    """.strip()
+
+    try:
+        soap_url = f"{instance_url}/services/Soap/m/63.0"
+        headers = {
+            "Content-Type": "text/xml",
+            "SOAPAction": "deploy"
+        }
+
+        response = requests.post(soap_url, headers=headers, data=soap_envelope)
+        return response.text, response.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 
 if __name__ == '__main__':
