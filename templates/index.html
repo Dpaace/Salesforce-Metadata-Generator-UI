@@ -250,44 +250,71 @@
             console.log('📦 metadata.zip (Base64):', zipFile ? zipFile.substring(0, 100) + '...' : '[MISSING]');
             
             alert('✅ Check console for values. Make sure all 3 are present.');
-          }
+        }
           
 
-          async function deployToSalesforce() {
+        async function deployToSalesforce() {
             const accessToken = localStorage.getItem('sf_access_token');
             const instanceUrl = localStorage.getItem('sf_instance_url');
             const zipFile = document.getElementById('base64Text').value.trim();
           
             if (!accessToken || !instanceUrl || !zipFile) {
-              alert('⚠️ Missing access token, instance URL, or metadata. Please check all steps.');
+              alert('⚠️ Missing access token, instance URL, or metadata.');
               return;
             }
           
+            document.body.insertAdjacentHTML('beforeend', `<div id="loader" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div class="bg-white px-6 py-4 rounded shadow text-center">
+                <div class="text-lg font-semibold mb-2">Deploying to Salesforce...</div>
+                <div class="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+              </div>
+            </div>`);
+          
             try {
-              const response = await fetch('/deploy-to-salesforce', {
+              const deployRes = await fetch('/deploy-to-salesforce', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  access_token: accessToken,
-                  instance_url: instanceUrl,
-                  zip_file: zipFile
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_token: accessToken, instance_url: instanceUrl, zip_file: zipFile })
               });
           
-              const text = await response.text();
+              const deployText = await deployRes.text();
+              const deployIdMatch = deployText.match(/<id>(.*?)<\/id>/);
+              const deployId = deployIdMatch?.[1];
           
-              if (response.ok) {
-                alert("✅ Deployment request sent to Salesforce!");
-                console.log("📝 Deploy response:", text);
-              } else {
-                alert("❌ Deployment failed. Check the console for details.");
-                console.error("❌ Salesforce Error:", text);
-              }
-            } catch (err) {
-              console.error("❌ Fetch Error:", err);
-              alert("🚨 Network error during deployment.");
+              if (!deployId) throw new Error('Deployment ID not found.');
+          
+              // Poll for status
+              const pollInterval = 5000;
+              const pollStatus = async () => {
+                const statusRes = await fetch('/check-deploy-status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ access_token: accessToken, instance_url: instanceUrl, deploy_id: deployId })
+                });
+                const statusText = await statusRes.text();
+              
+                console.log("📦 Deployment Status Response:", statusText);
+              
+                const statusMatch = statusText.match(/<status>(.*?)<\/status>/);
+                const status = statusMatch?.[1];
+              
+                if (status === 'Succeeded') {
+                  document.getElementById('loader').remove();
+                  window.location.href = '/success';
+                } else if (statusText.includes('<done>true</done>')) {
+                  document.getElementById('loader').remove();
+                  alert(`❌ Deployment failed. Final status: ${status}`);
+                } else {
+                  setTimeout(pollStatus, pollInterval);
+                }
+              };
+              
+          
+              setTimeout(pollStatus, pollInterval);
+            } catch (error) {
+              console.error(error);
+              document.getElementById('loader').remove();
+              alert('❌ Deployment error: ' + error.message);
             }
         }
           

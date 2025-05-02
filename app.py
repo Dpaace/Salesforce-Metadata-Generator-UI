@@ -49,6 +49,13 @@ def oauth_redirect():
 def index():
     return open('templates/index.html').read()
 
+@app.route('/success')
+def deploy_success():
+    return "<h1 style='text-align:center;margin-top:100px;'>🎉 Congrats! Now you can register data.</h1>"
+
+@app.route('/deploying')
+def deploying_screen():
+    return open('templates/deploying.html').read()
 
 @app.route('/exchange-token', methods=['POST'])
 def exchange_token():
@@ -73,8 +80,7 @@ def exchange_token():
     return jsonify(response.json())
 
 
-from flask import request, jsonify
-import requests
+
 
 @app.route('/deploy-to-salesforce', methods=['POST'])
 def deploy_to_salesforce():
@@ -120,6 +126,44 @@ def deploy_to_salesforce():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/check-deploy-status', methods=['POST'])
+def check_deploy_status():
+    data = request.json
+    access_token = data.get('access_token')
+    instance_url = data.get('instance_url')
+    deploy_id = data.get('deploy_id')
+
+    if not all([access_token, instance_url, deploy_id]):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    soap_envelope = f"""
+    <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+      <env:Header>
+        <SessionHeader xmlns="http://soap.sforce.com/2006/04/metadata">
+          <sessionId>{access_token}</sessionId>
+        </SessionHeader>
+      </env:Header>
+      <env:Body>
+        <checkDeployStatus xmlns="http://soap.sforce.com/2006/04/metadata">
+          <id>{deploy_id}</id>
+          <includeDetails>false</includeDetails>
+        </checkDeployStatus>
+      </env:Body>
+    </env:Envelope>
+    """.strip()
+
+    headers = {
+        "Content-Type": "text/xml",
+        "SOAPAction": "checkDeployStatus"
+    }
+
+    try:
+        response = requests.post(f"{instance_url}/services/Soap/m/63.0", headers=headers, data=soap_envelope)
+        return response.text, response.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
