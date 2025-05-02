@@ -41,15 +41,16 @@
             </div>
             <button onclick="debugDeployInputs()" class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-2 rounded">
                 🧪 Debug Deployment Inputs
-              </button>
+            </button>
             <div class="text-center mt-4">
-                <button onclick="deployToSalesforce()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded">
-                  Deploy to Salesforce
+                <button onclick="deployToSalesforce()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded">
+                    Deploy to Salesforce
                 </button>
             </div>
         </div>
-       
-          
+
+
 
     </div>
 
@@ -60,7 +61,7 @@
             const currentCount = document.querySelectorAll('[id^="object-"]').length + 1;
             const objectId = `object-${currentCount}`;
             const container = document.getElementById('objectsContainer');
-          
+
             const objectHTML = `
               <div class="p-6 border rounded-lg bg-gray-50" id="${objectId}">
                 <div class="flex justify-between items-center mb-4">
@@ -85,11 +86,11 @@
                 </div>
               </div>
             `;
-          
+
             container.insertAdjacentHTML('beforeend', objectHTML);
-          }
-          
-        
+        }
+
+
         function addField(button) {
             const fieldsContainer = button.previousElementSibling;
             const fieldHTML = `
@@ -213,20 +214,20 @@
             const objectBlock = button.closest('[id^="object-"]');
             objectBlock.remove();
             updateObjectTitles();
-          }
-          
+        }
+
         function updateObjectTitles() {
             const objectSections = document.querySelectorAll('[id^="object-"]');
             objectSections.forEach((section, index) => {
-              section.id = `object-${index + 1}`;
-              const header = section.querySelector('h2');
-              if (header) {
-                header.textContent = `Object ${index + 1}`;
-              }
+                section.id = `object-${index + 1}`;
+                const header = section.querySelector('h2');
+                if (header) {
+                    header.textContent = `Object ${index + 1}`;
+                }
             });
         }
-          
-          
+
+
         function removeField(button) {
             const fieldRow = button.closest('.field-row');
             fieldRow.remove();
@@ -235,92 +236,42 @@
         window.onload = function () {
             const storedToken = localStorage.getItem('sf_access_token');
             const storedInstanceUrl = localStorage.getItem('sf_instance_url');
-          
-            
+
+
         };
 
         function debugDeployInputs() {
             const accessToken = localStorage.getItem('sf_access_token');
             const instanceUrl = localStorage.getItem('sf_instance_url');
             const zipFile = document.getElementById('base64Text').value.trim();
-          
+
             console.log('🧪 Debugging Deployment Inputs:');
             console.log('🔐 Access Token:', accessToken || '[MISSING]');
             console.log('🌐 Instance URL:', instanceUrl || '[MISSING]');
             console.log('📦 metadata.zip (Base64):', zipFile ? zipFile.substring(0, 100) + '...' : '[MISSING]');
-            
+
             alert('✅ Check console for values. Make sure all 3 are present.');
         }
-          
+
 
         async function deployToSalesforce() {
             const accessToken = localStorage.getItem('sf_access_token');
             const instanceUrl = localStorage.getItem('sf_instance_url');
             const zipFile = document.getElementById('base64Text').value.trim();
-          
+
             if (!accessToken || !instanceUrl || !zipFile) {
-              alert('⚠️ Missing access token, instance URL, or metadata.');
-              return;
+                alert('⚠️ Missing access token, instance URL, or metadata.');
+                return;
             }
-          
-            document.body.insertAdjacentHTML('beforeend', `<div id="loader" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div class="bg-white px-6 py-4 rounded shadow text-center">
-                <div class="text-lg font-semibold mb-2">Deploying to Salesforce...</div>
-                <div class="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-              </div>
-            </div>`);
-          
-            try {
-              const deployRes = await fetch('/deploy-to-salesforce', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ access_token: accessToken, instance_url: instanceUrl, zip_file: zipFile })
-              });
-          
-              const deployText = await deployRes.text();
-              const deployIdMatch = deployText.match(/<id>(.*?)<\/id>/);
-              const deployId = deployIdMatch?.[1];
-          
-              if (!deployId) throw new Error('Deployment ID not found.');
-          
-              // Poll for status
-              const pollInterval = 5000;
-              const pollStatus = async () => {
-                const statusRes = await fetch('/check-deploy-status', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ access_token: accessToken, instance_url: instanceUrl, deploy_id: deployId })
-                });
-                const statusText = await statusRes.text();
-              
-                console.log("📦 Deployment Status Response:", statusText);
-              
-                const statusMatch = statusText.match(/<status>(.*?)<\/status>/);
-                const status = statusMatch?.[1];
-              
-                if (status === 'Succeeded') {
-                  document.getElementById('loader').remove();
-                  window.location.href = '/success';
-                } else if (statusText.includes('<done>true</done>')) {
-                  document.getElementById('loader').remove();
-                  alert(`❌ Deployment failed. Final status: ${status}`);
-                } else {
-                  setTimeout(pollStatus, pollInterval);
-                }
-              };
-              
-          
-              setTimeout(pollStatus, pollInterval);
-            } catch (error) {
-              console.error(error);
-              document.getElementById('loader').remove();
-              alert('❌ Deployment error: ' + error.message);
-            }
+
+            // Store all necessary variables for /deploying screen
+            localStorage.setItem('sf_zip_file', zipFile);
+            localStorage.setItem('sf_deploy_in_progress', 'true');
+
+            // Redirect to full deploy UI screen
+            window.location.href = '/deploying';
         }
-          
-          
-          
-          
+
 
     </script>
 

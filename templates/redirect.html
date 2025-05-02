@@ -1,37 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>OAuth Redirect Handler</title>
-  <script>
-    window.onload = function () {
-      const params = new URLSearchParams(window.location.search);
-      const rawCode = params.get("code");
-  
-      if (rawCode) {
-        const decodedCode = decodeURIComponent(rawCode);
-  
-        // ✅ Copy to clipboard (optional for fallback)
-        navigator.clipboard.writeText(decodedCode).catch(console.error);
-  
-        // ✅ Send to the opener window
-        if (window.opener) {
-          window.opener.postMessage({ type: 'SF_AUTH_CODE', code: decodedCode }, '*');
-        }
-  
-        // ✅ Close the popup window automatically
-        setTimeout(() => {
-          window.close();
-        }, 500); // short delay to allow postMessage and clipboard to complete
-      } else {
-        alert("❌ No authorization code found in URL.");
-      }
-    };
-  </script>
-  
-  
+    <meta charset="UTF-8">
+    <title>OAuth Redirect Handler</title>
+    <script>
+        window.onload = function () {
+            const params = new URLSearchParams(window.location.search);
+            const rawCode = params.get("code");
+
+            if (rawCode) {
+                const decodedCode = decodeURIComponent(rawCode);
+
+                // ✅ Copy to clipboard (optional for fallback)
+                navigator.clipboard.writeText(decodedCode).catch(console.error);
+
+                // ✅ Send to the opener window
+                if (window.opener) {
+                    window.opener.postMessage({ type: 'SF_AUTH_CODE', code: decodedCode }, '*');
+                }
+
+                // ✅ Close the popup window automatically
+                setTimeout(() => {
+                    window.close();
+                }, 500); // short delay to allow postMessage and clipboard to complete
+            } else {
+                alert("❌ No authorization code found in URL.");
+            }
+        };
+    </script>
+
+
 </head>
+
 <body>
-  <h2 style="text-align:center; margin-top:100px;">Processing authorization code...</h2>
+    <h2 style="text-align:center; margin-top:100px;">Processing authorization code...</h2>
 </body>
+
 </html>
