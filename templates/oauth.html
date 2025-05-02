@@ -96,7 +96,15 @@
         document.getElementById('tokenModal').classList.add('hidden');
       }
       
+      window.addEventListener('message', function (event) {
+        const message = event.data;
       
+        if (message?.type === 'SF_AUTH_CODE') {
+          document.getElementById('authCode').value = message.code;
+          alert('✅ Authorization code fetched successfully!');
+          document.getElementById('authCode').focus();
+        }
+      });
       
   </script>
 </body>
