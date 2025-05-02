@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OAuth Redirect Handler</title>
+  <script>
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.search);
+      const rawCode = params.get("code");
+
+      if (rawCode) {
+        const decodedCode = decodeURIComponent(rawCode);
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(decodedCode)
+          .then(() => {
+            alert("✅ Decoded authorization code copied to clipboard:\n\n" + decodedCode);
+          })
+          .catch(err => {
+            console.error("Clipboard failed:", err);
+            alert("Decoded code:\n\n" + decodedCode);
+          });
+      } else {
+        alert("❌ No authorization code found in URL.");
+      }
+    };
+  </script>
+</head>
+<body>
+  <h2 style="text-align:center; margin-top:100px;">Processing authorization code...</h2>
+</body>
+</html>

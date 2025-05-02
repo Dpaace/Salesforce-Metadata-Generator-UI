@@ -1,6 +1,6 @@
 import os
 
-def create_metadata_folder(base_path, object_label, object_api_name, plural_label, fields):
+def create_metadata_folder(base_path, objects):
     object_folder = os.path.join(base_path, 'objects')
     layout_folder = os.path.join(base_path, 'layouts')
     tab_folder = os.path.join(base_path, 'tabs')
@@ -11,27 +11,37 @@ def create_metadata_folder(base_path, object_label, object_api_name, plural_labe
     os.makedirs(tab_folder, exist_ok=True)
     os.makedirs(profile_folder, exist_ok=True)
 
-    # Ensure __c is added only once
-    if not object_api_name.endswith('__c'):
-        object_api_full = f"{object_api_name}__c"
-    else:
-        object_api_full = object_api_name
+    all_object_api_full_names = []
+    all_object_labels = []
 
-    # Write files
-    with open(os.path.join(object_folder, f"{object_api_full}.object"), 'w') as f:
-        f.write(generate_object_xml(object_label, plural_label, object_api_full, fields))
+    for obj in objects:
+        object_label = obj['objectLabel']
+        object_api_name = obj['objectApiName']
+        object_plural_label = obj['objectPluralLabel']
+        fields = obj['fields']
 
-    with open(os.path.join(layout_folder, f"{object_api_full}-{object_label} Layout.layout"), 'w') as f:
-        f.write(generate_layout_xml(object_api_full, fields))
+        if not object_api_name.endswith('__c'):
+            object_api_full = f"{object_api_name}__c"
+        else:
+            object_api_full = object_api_name
 
-    with open(os.path.join(tab_folder, f"{object_api_full}.tab"), 'w') as f:
-        f.write(generate_tab_xml(object_label, object_api_full))
+        all_object_api_full_names.append(object_api_full)
+        all_object_labels.append(object_label)
+
+        with open(os.path.join(object_folder, f"{object_api_full}.object"), 'w') as f:
+            f.write(generate_object_xml(object_label, object_plural_label, object_api_full, fields))
+
+        with open(os.path.join(layout_folder, f"{object_api_full}-{object_label} Layout.layout"), 'w') as f:
+            f.write(generate_layout_xml(object_api_full, fields))
+
+        with open(os.path.join(tab_folder, f"{object_api_full}.tab"), 'w') as f:
+            f.write(generate_tab_xml(object_label, object_api_full))
 
     with open(os.path.join(profile_folder, "Admin.profile-meta.xml"), 'w') as f:
-        f.write(generate_profile_xml(object_api_full, fields))
+        f.write(generate_profile_xml(all_object_api_full_names, objects))
 
     with open(os.path.join(base_path, "package.xml"), 'w') as f:
-        f.write(generate_package_xml(object_api_full, object_label))
+        f.write(generate_package_xml(all_object_api_full_names, all_object_labels))
 
 def generate_object_xml(object_label, plural_label, api_name, fields):
     fields_xml = ""
@@ -102,49 +112,66 @@ def generate_tab_xml(object_label, api_name):
     <motif>Custom41: Handsaw</motif>
 </CustomTab>"""
 
-def generate_profile_xml(api_name, fields):
-    field_permissions = ""
-    for field in fields:
-        field_name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
-        field_permissions += f"""
+def generate_profile_xml(object_api_names, objects):
+    permissions_xml = ""
+    for obj, object_api_name in zip(objects, object_api_names):
+        fields = obj['fields']
+        for field in fields:
+            field_name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
+            permissions_xml += f"""
     <fieldPermissions>
-        <field>{api_name}.{field_name}</field>
+        <field>{object_api_name}.{field_name}</field>
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>"""
 
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
-<Profile xmlns="http://soap.sforce.com/2006/04/metadata">
-    <tabVisibilities>
-        <tab>{api_name}</tab>
-        <visibility>DefaultOn</visibility>
-    </tabVisibilities>
-
+    objects_permissions = ""
+    for object_api_name in object_api_names:
+        objects_permissions += f"""
     <objectPermissions>
-        <object>{api_name}</object>
+        <object>{object_api_name}</object>
         <allowCreate>true</allowCreate>
         <allowRead>true</allowRead>
         <allowEdit>true</allowEdit>
         <allowDelete>true</allowDelete>
         <modifyAllRecords>true</modifyAllRecords>
         <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    {field_permissions}
+    </objectPermissions>"""
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Profile xmlns="http://soap.sforce.com/2006/04/metadata">
+    {objects_permissions}
+    {permissions_xml}
 </Profile>"""
 
-def generate_package_xml(api_name, object_label):
+def generate_package_xml(object_api_names, object_labels):
+    types_xml = ""
+    for name in object_api_names:
+        types_xml += f"""
+        <members>{name}</members>"""
+
+    tab_types_xml = ""
+    for name in object_api_names:
+        tab_types_xml += f"""
+        <members>{name}</members>"""
+
+    layout_types_xml = ""
+    for name, label in zip(object_api_names, object_labels):
+        layout_types_xml += f"""
+        <members>{name}-{label} Layout</members>"""
+
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
-        <members>{api_name}</members>
+        {types_xml}
         <name>CustomObject</name>
     </types>
     <types>
-        <members>{api_name}</members>
+        {tab_types_xml}
         <name>CustomTab</name>
     </types>
     <types>
-        <members>{api_name}-{object_label} Layout</members>
+        {layout_types_xml}
         <name>Layout</name>
     </types>
     <types>
