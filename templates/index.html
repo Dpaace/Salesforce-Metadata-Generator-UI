@@ -39,7 +39,8 @@
                     Copy to Clipboard
                 </button>
             </div>
-            <button onclick="debugDeployInputs()" class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-2 rounded">
+            <button onclick="debugDeployInputs()"
+                class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-2 rounded mt-4">
                 🧪 Debug Deployment Inputs
             </button>
             <div class="text-center mt-4">
@@ -49,9 +50,6 @@
                 </button>
             </div>
         </div>
-
-
-
     </div>
 
     <script>
@@ -70,13 +68,17 @@
                     🗑 Remove Object
                   </button>
                 </div>
-          
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                   <input type="text" placeholder="Object Label" class="border p-2 rounded object-label">
                   <input type="text" placeholder="API Name" class="border p-2 rounded object-api">
                   <input type="text" placeholder="Plural Label" class="border p-2 rounded object-plural">
+                  <select class="border p-2 rounded object-type" onchange="togglePlural(this)">
+                    <option value="custom">Custom Object</option>
+                    <option value="standard">Standard Object</option>
+                  </select>
                 </div>
-          
+
                 <div>
                   <h3 class="text-lg font-semibold mb-2">Fields</h3>
                   <div class="space-y-4 fieldsContainer"></div>
@@ -90,124 +92,45 @@
             container.insertAdjacentHTML('beforeend', objectHTML);
         }
 
+        function togglePlural(select) {
+            const container = select.closest('[id^="object-"]');
+            const pluralInput = container.querySelector('.object-plural');
+            if (select.value === 'standard') {
+                pluralInput.disabled = true;
+                pluralInput.placeholder = 'N/A for standard object';
+                pluralInput.value = '';
+            } else {
+                pluralInput.disabled = false;
+                pluralInput.placeholder = 'Plural Label';
+            }
+        }
 
         function addField(button) {
             const fieldsContainer = button.previousElementSibling;
             const fieldHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center field-row">
-          <input type="text" placeholder="Field Label" class="border p-2 rounded field-label">
-          <select class="border p-2 rounded field-type">
-            <option value="Text">Text</option>
-            <option value="Number">Number</option>
-            <option value="Date">Date</option>
-            <option value="Picklist">Picklist</option>
-            <option value="Checkbox">Checkbox</option>
-          </select>
-          <input type="text" placeholder="API Name (optional)" class="border p-2 rounded field-api">
-          <select class="border p-2 rounded field-required">
-            <option value="false">Optional</option>
-            <option value="true">Required</option>
-          </select>
-          <button onclick="removeField(this)" class="text-red-600 hover:text-red-800 text-sm">✖</button>
-
-        </div>
-      `;
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center field-row">
+                    <input type="text" placeholder="Field Label" class="border p-2 rounded field-label">
+                    <select class="border p-2 rounded field-type">
+                        <option value="Text">Text</option>
+                        <option value="Number">Number</option>
+                        <option value="Date">Date</option>
+                        <option value="Picklist">Picklist</option>
+                        <option value="Checkbox">Checkbox</option>
+                    </select>
+                    <input type="text" placeholder="API Name (optional)" class="border p-2 rounded field-api">
+                    <select class="border p-2 rounded field-required">
+                        <option value="false">Optional</option>
+                        <option value="true">Required</option>
+                    </select>
+                    <button onclick="removeField(this)" class="text-red-600 hover:text-red-800 text-sm">✖</button>
+                </div>
+            `;
             fieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
         }
 
-        // (generateZip and copyBase64 function will come next - when we update JS!)
-        async function generateZip() {
-            const objectSections = document.querySelectorAll('[id^="object-"]');
-
-            if (objectSections.length === 0) {
-                alert('Please add at least one object.');
-                return;
-            }
-
-            const objects = [];
-
-            objectSections.forEach(section => {
-                const objectLabel = section.querySelector('.object-label').value.trim();
-                const objectApiName = section.querySelector('.object-api').value.trim();
-                const objectPluralLabel = section.querySelector('.object-plural').value.trim();
-                const fieldsContainer = section.querySelector('.fieldsContainer');
-
-                if (!objectLabel || !objectApiName || !objectPluralLabel) {
-                    return; // skip empty object blocks
-                }
-
-                const fields = [];
-                const fieldLabels = fieldsContainer.querySelectorAll('.field-label');
-                const fieldTypes = fieldsContainer.querySelectorAll('.field-type');
-                const fieldApis = fieldsContainer.querySelectorAll('.field-api');
-                const fieldRequireds = fieldsContainer.querySelectorAll('.field-required');
-
-                for (let i = 0; i < fieldLabels.length; i++) {
-                    if (fieldLabels[i].value.trim() === '') continue;
-                    fields.push({
-                        label: fieldLabels[i].value.trim(),
-                        type: fieldTypes[i].value,
-                        apiName: fieldApis[i].value.trim(),
-                        required: fieldRequireds[i].value === 'true'
-                    });
-                }
-
-                objects.push({
-                    objectLabel,
-                    objectApiName,
-                    objectPluralLabel,
-                    fields
-                });
-            });
-
-            if (objects.length === 0) {
-                alert('Please fill in all required fields.');
-                return;
-            }
-
-            try {
-                const response = await fetch('/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(objects)
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to generate metadata.zip');
-                }
-
-                const blob = await response.blob();
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-
-                reader.onloadend = function () {
-                    const base64data = reader.result.split(',')[1];
-
-                    document.getElementById('base64Text').value = base64data;
-                    document.getElementById('base64Output').classList.remove('hidden');
-                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                };
-
-            } catch (error) {
-                console.error(error);
-                alert('Error generating metadata.');
-            }
-        }
-
-        function copyBase64() {
-            const textarea = document.getElementById('base64Text');
-            const textToCopy = textarea.value;
-
-            navigator.clipboard.writeText(textToCopy)
-                .then(() => {
-                    alert('Base64 text copied to clipboard!');
-                })
-                .catch(err => {
-                    console.error('Failed to copy: ', err);
-                    alert('Failed to copy Base64 text. Please try manually.');
-                });
+        function removeField(button) {
+            const fieldRow = button.closest('.field-row');
+            fieldRow.remove();
         }
 
         function removeObject(button) {
@@ -227,18 +150,100 @@
             });
         }
 
+        async function generateZip() {
+            const objectSections = document.querySelectorAll('[id^="object-"]');
 
-        function removeField(button) {
-            const fieldRow = button.closest('.field-row');
-            fieldRow.remove();
+            if (objectSections.length === 0) {
+                alert('Please add at least one object.');
+                return;
+            }
+
+            const objects = [];
+
+            for (const section of objectSections) {
+                const objectLabel = section.querySelector('.object-label').value.trim();
+                const objectApiName = section.querySelector('.object-api').value.trim();
+                const objectPluralLabel = section.querySelector('.object-plural').value.trim();
+                const objectType = section.querySelector('.object-type')?.value || 'custom';
+                const fieldsContainer = section.querySelector('.fieldsContainer');
+
+                if (!objectLabel || !objectApiName || (objectType === 'custom' && !objectPluralLabel)) {
+                    alert('Please fill in all required object details.');
+                    return;
+                }
+
+                const fields = [];
+                const fieldRows = fieldsContainer.querySelectorAll('.field-row');
+                for (const row of fieldRows) {
+                    const label = row.querySelector('.field-label').value.trim();
+                    const type = row.querySelector('.field-type').value;
+                    const apiName = row.querySelector('.field-api').value.trim();
+                    const required = row.querySelector('.field-required').value === 'true';
+
+                    if (!label) {
+                        alert('Each field must have a label.');
+                        return;
+                    }
+
+                    fields.push({
+                        label,
+                        type,
+                        apiName,
+                        required
+                    });
+                }
+
+                objects.push({
+                    objectLabel,
+                    objectApiName,
+                    objectPluralLabel,
+                    objectType,
+                    fields
+                });
+            }
+
+            if (objects.length === 0) {
+                alert('Please complete the fields for at least one object.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(objects)
+                });
+
+                if (!response.ok) throw new Error('Failed to generate metadata.zip');
+
+                const blob = await response.blob();
+                const reader = new FileReader();
+
+                reader.onloadend = function () {
+                    const base64data = reader.result.split(',')[1];
+                    document.getElementById('base64Text').value = base64data;
+                    document.getElementById('base64Output').classList.remove('hidden');
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                };
+
+                reader.readAsDataURL(blob);
+
+            } catch (error) {
+                console.error(error);
+                alert('Error generating metadata.');
+            }
         }
 
-        window.onload = function () {
-            const storedToken = localStorage.getItem('sf_access_token');
-            const storedInstanceUrl = localStorage.getItem('sf_instance_url');
 
-
-        };
+        function copyBase64() {
+            const textarea = document.getElementById('base64Text');
+            navigator.clipboard.writeText(textarea.value)
+                .then(() => alert('Base64 text copied to clipboard!'))
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Failed to copy Base64 text. Please try manually.');
+                });
+        }
 
         function debugDeployInputs() {
             const accessToken = localStorage.getItem('sf_access_token');
@@ -253,7 +258,6 @@
             alert('✅ Check console for values. Make sure all 3 are present.');
         }
 
-
         async function deployToSalesforce() {
             const accessToken = localStorage.getItem('sf_access_token');
             const instanceUrl = localStorage.getItem('sf_instance_url');
@@ -264,15 +268,16 @@
                 return;
             }
 
-            // Store all necessary variables for /deploying screen
             localStorage.setItem('sf_zip_file', zipFile);
             localStorage.setItem('sf_deploy_in_progress', 'true');
 
-            // Redirect to full deploy UI screen
             window.location.href = '/deploying';
         }
 
-
+        window.onload = function () {
+            const storedToken = localStorage.getItem('sf_access_token');
+            const storedInstanceUrl = localStorage.getItem('sf_instance_url');
+        };
     </script>
 
 </body>

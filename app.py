@@ -148,7 +148,7 @@ def check_deploy_status():
       <env:Body>
         <checkDeployStatus xmlns="http://soap.sforce.com/2006/04/metadata">
           <id>{deploy_id}</id>
-          <includeDetails>false</includeDetails>
+          <includeDetails>true</includeDetails>
         </checkDeployStatus>
       </env:Body>
     </env:Envelope>
