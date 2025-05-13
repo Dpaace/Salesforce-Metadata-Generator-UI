@@ -1,79 +1,83 @@
 import os
 
 def create_metadata_folder(base_path, objects):
-    # Create necessary folders
-    os.makedirs(base_path, exist_ok=True)
-    os.makedirs(os.path.join(base_path, 'objects'), exist_ok=True)
-    os.makedirs(os.path.join(base_path, 'objects', 'fields'), exist_ok=True)
-    os.makedirs(os.path.join(base_path, 'layouts'), exist_ok=True)
-    os.makedirs(os.path.join(base_path, 'tabs'), exist_ok=True)
-    os.makedirs(os.path.join(base_path, 'profiles'), exist_ok=True)
+    object_folder = os.path.join(base_path, 'objects')
+    fields_folder = os.path.join(base_path, 'objects/fields')
+    layout_folder = os.path.join(base_path, 'layouts')
+    tab_folder = os.path.join(base_path, 'tabs')
+    profile_folder = os.path.join(base_path, 'profiles')
+
+    os.makedirs(object_folder, exist_ok=True)
+    os.makedirs(fields_folder, exist_ok=True)
+    os.makedirs(layout_folder, exist_ok=True)
+    os.makedirs(tab_folder, exist_ok=True)
+    os.makedirs(profile_folder, exist_ok=True)
 
     custom_objects = []
-    custom_labels = []
     standard_fields = []
-    profile_fields = []
 
     for obj in objects:
-        obj_label = obj['objectLabel']
-        obj_api = obj['objectApiName']
-        obj_plural = obj['objectPluralLabel']
-        obj_type = obj.get('objectType', 'custom')
+        label = obj['objectLabel']
+        api = obj['objectApiName']
+        plural = obj['objectPluralLabel']
         fields = obj['fields']
+        is_custom = obj.get('objectType', 'custom') == 'custom'
 
-        if obj_type == 'custom':
-            if not obj_api.endswith('__c'):
-                obj_api += '__c'
-            custom_objects.append(obj_api)
-            custom_labels.append(obj_label)
+        if is_custom:
+            if not api.endswith('__c'):
+                api += '__c'
+            custom_objects.append(api)
 
-            # Create .object
-            with open(os.path.join(base_path, 'objects', f"{obj_api}.object"), 'w') as f:
-                f.write(generate_custom_object_xml(obj_label, obj_plural, obj_api, fields))
+            # Create .object file
+            with open(os.path.join(object_folder, f"{api}.object"), 'w') as f:
+                f.write(generate_object_xml(label, plural, api, fields))
 
             # Create layout
-            with open(os.path.join(base_path, 'layouts', f"{obj_api}-{obj_label} Layout.layout"), 'w') as f:
-                f.write(generate_layout_xml(fields))
+            with open(os.path.join(layout_folder, f"{api}-{label} Layout.layout"), 'w') as f:
+                f.write(generate_layout_xml(api, fields))
 
             # Create tab
-            with open(os.path.join(base_path, 'tabs', f"{obj_api}.tab"), 'w') as f:
-                f.write(generate_tab_xml(obj_api, obj_label))
-
-            # Track for profile
-            for field in fields:
-                field_name = field['apiName'] or field['label'].replace(" ", "_") + '__c'
-                profile_fields.append(f"{obj_api}.{field_name}")
+            with open(os.path.join(tab_folder, f"{api}.tab"), 'w') as f:
+                f.write(generate_tab_xml(label, api))
         else:
+            # Treat as standard object (e.g., Account, Contact)
             for field in fields:
-                field_name = field['apiName'] or field['label'].replace(" ", "_") + '__c'
-                standard_fields.append({'object': obj_api, 'field': field_name})
-                profile_fields.append(f"{obj_api}.{field_name}")
+                field_name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
+                standard_fields.append({
+                    'object': api,
+                    'field': field_name,
+                    'label': field['label'],
+                    'type': field['type']
+                })
 
-                # Create field metadata file
-                field_dir = os.path.join(base_path, 'objects', 'fields')
-                with open(os.path.join(field_dir, f"{obj_api}.{field_name}.field-meta.xml"), 'w') as f:
-                    f.write(generate_standard_field_xml(field_name, field['label'], field['type']))
+                # Create field-meta.xml file
+                with open(os.path.join(fields_folder, f"{api}.{field_name}.field-meta.xml"), 'w') as f:
+                    f.write(generate_custom_field_xml(field_name, field['label'], field['type']))
 
-    # Profile metadata
-    with open(os.path.join(base_path, 'profiles', 'Admin.profile-meta.xml'), 'w') as f:
-        f.write(generate_profile_xml(custom_objects, profile_fields))
+    # Write profile
+    with open(os.path.join(profile_folder, "Admin.profile-meta.xml"), 'w') as f:
+        f.write(generate_profile_xml(custom_objects, objects, standard_fields))
 
-    # Package.xml
-    with open(os.path.join(base_path, 'package.xml'), 'w') as f:
-        f.write(generate_package_xml(custom_objects, profile_fields, standard_fields))
+    # Write package.xml
+    with open(os.path.join(base_path, "package.xml"), 'w') as f:
+        f.write(generate_package_xml(custom_objects, objects, standard_fields))
 
 
-def generate_custom_object_xml(label, plural, api_name, fields):
+def generate_object_xml(label, plural, api_name, fields):
     fields_xml = ""
     for field in fields:
-        field_name = field['apiName'] or field['label'].replace(" ", "_") + '__c'
+        name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
+        typ = field['type']
+        length = "<length>100</length>" if typ == 'Text' else ""
+
         fields_xml += f"""
     <fields>
-        <fullName>{field_name}</fullName>
+        <fullName>{name}</fullName>
         <label>{field['label']}</label>
-        <type>{field['type']}</type>
-        {"<length>100</length>" if field['type'] == "Text" else ""}
+        <type>{typ}</type>
+        {length}
     </fields>"""
+
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <label>{label}</label>
@@ -87,23 +91,21 @@ def generate_custom_object_xml(label, plural, api_name, fields):
     {fields_xml}
 </CustomObject>"""
 
-def generate_standard_field_xml(name, label, field_type):
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>{name}</fullName>
-    <label>{label}</label>
-    <type>{field_type}</type>
-    {"<length>100</length>" if field_type == "Text" else ""}
-</CustomField>"""
 
-def generate_layout_xml(fields):
-    layout_items = ""
+def generate_layout_xml(api_name, fields):
+    layout_items = """
+            <layoutItems>
+                <behavior>Required</behavior>
+                <field>Name</field>
+            </layoutItems>"""
+
     for field in fields:
-        field_name = field['apiName'] or field['label'].replace(" ", "_") + '__c'
+        name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
         layout_items += f"""
             <layoutItems>
-                <field>{field_name}</field>
+                <field>{name}</field>
             </layoutItems>"""
+
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Layout xmlns="http://soap.sforce.com/2006/04/metadata">
     <layoutSections>
@@ -111,13 +113,15 @@ def generate_layout_xml(fields):
         <detailHeading>true</detailHeading>
         <editHeading>true</editHeading>
         <label>Information</label>
-        <layoutColumns>{layout_items}
+        <layoutColumns>
+            {layout_items}
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
     </layoutSections>
 </Layout>"""
 
-def generate_tab_xml(api_name, label):
+
+def generate_tab_xml(label, api_name):
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>{api_name}</fullName>
@@ -126,12 +130,33 @@ def generate_tab_xml(api_name, label):
     <motif>Custom41: Handsaw</motif>
 </CustomTab>"""
 
-def generate_profile_xml(object_names, field_permissions):
-    object_xml = ""
-    for obj in object_names:
-        object_xml += f"""
+
+def generate_profile_xml(custom_object_apis, custom_objects, standard_fields):
+    permissions = ""
+
+    for obj, api in zip(custom_objects, custom_object_apis):
+        for field in obj['fields']:
+            name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
+            permissions += f"""
+    <fieldPermissions>
+        <field>{api}.{name}</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>"""
+
+    for sf in standard_fields:
+        permissions += f"""
+    <fieldPermissions>
+        <field>{sf['object']}.{sf['field']}</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>"""
+
+    object_access = ""
+    for api in custom_object_apis:
+        object_access += f"""
     <objectPermissions>
-        <object>{obj}</object>
+        <object>{api}</object>
         <allowCreate>true</allowCreate>
         <allowRead>true</allowRead>
         <allowEdit>true</allowEdit>
@@ -140,53 +165,52 @@ def generate_profile_xml(object_names, field_permissions):
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>"""
 
-    field_xml = ""
-    for field in field_permissions:
-        field_xml += f"""
-    <fieldPermissions>
-        <field>{field}</field>
-        <readable>true</readable>
-        <editable>true</editable>
-    </fieldPermissions>"""
-
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Profile xmlns="http://soap.sforce.com/2006/04/metadata">
-    {object_xml}
-    {field_xml}
+    {permissions}
+    {object_access}
 </Profile>"""
 
-def generate_package_xml(custom_objects, field_permissions, standard_fields):
-    types = []
 
-    if custom_objects:
-        types.append(f"""<types>
-        {"".join(f"<members>{o}</members>" for o in custom_objects)}
-        <name>CustomObject</name>
-    </types>""")
+def generate_custom_field_xml(field_name, label, field_type):
+    length = "<length>100</length>" if field_type == "Text" else ""
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>{field_name}</fullName>
+    <label>{label}</label>
+    <type>{field_type}</type>
+    {length}
+</CustomField>"""
 
-        types.append(f"""<types>
-        {"".join(f"<members>{o}</members>" for o in custom_objects)}
-        <name>CustomTab</name>
-    </types>""")
 
-        types.append(f"""<types>
-        {"".join(f"<members>{o}-{o.split('__')[0]} Layout</members>" for o in custom_objects)}
-        <name>Layout</name>
-    </types>""")
-
-    if standard_fields:
-        types.append(f"""<types>
-        {"".join(f"<members>{f['object']}.{f['field']}</members>" for f in standard_fields)}
-        <name>CustomField</name>
-    </types>""")
-
-    types.append("""<types>
-        <members>Admin</members>
-        <name>Profile</name>
-    </types>""")
+def generate_package_xml(custom_object_apis, custom_objects, standard_fields):
+    object_entries = "".join(f"<members>{api}</members>\n" for api in custom_object_apis)
+    tab_entries = "".join(f"<members>{api}</members>\n" for api in custom_object_apis)
+    layout_entries = "".join(
+        f"<members>{api}-{obj['objectLabel']} Layout</members>\n"
+        for api, obj in zip(custom_object_apis, custom_objects)
+    )
+    field_entries = "".join(
+        f"<members>{sf['object']}.{sf['field']}</members>\n" for sf in standard_fields
+    )
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-    {''.join(types)}
+    <types>
+        {object_entries}<name>CustomObject</name>
+    </types>
+    <types>
+        {tab_entries}<name>CustomTab</name>
+    </types>
+    <types>
+        {layout_entries}<name>Layout</name>
+    </types>
+    <types>
+        {field_entries}<name>CustomField</name>
+    </types>
+    <types>
+        <members>Admin</members>
+        <name>Profile</name>
+    </types>
     <version>63.0</version>
 </Package>"""

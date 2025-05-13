@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>Custom_Text_Field__c</fullName>
+        <label>Custom Text Field</label>
+        <type>Text</type>
+        <length>255</length>
+        <description>This is a sample custom text field on Account.</description>
+        <inlineHelpText>Displays sample text information.</inlineHelpText>
+        <required>false</required>
+        <unique>false</unique>
+        <externalId>false</externalId>
+        <trackTrending>false</trackTrending>
+    </fields>
+    <fullName>Account</fullName>
+</CustomObject>

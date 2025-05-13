@@ -112,10 +112,10 @@
                     <input type="text" placeholder="Field Label" class="border p-2 rounded field-label">
                     <select class="border p-2 rounded field-type">
                         <option value="Text">Text</option>
-                        <option value="Number">Number</option>
+                        <!-- <option value="Number">Number</option> -->
                         <option value="Date">Date</option>
-                        <option value="Picklist">Picklist</option>
-                        <option value="Checkbox">Checkbox</option>
+                        <!-- <option value="Picklist">Picklist</option> -->
+                        <!-- <option value="Checkbox">Checkbox</option> -->
                     </select>
                     <input type="text" placeholder="API Name (optional)" class="border p-2 rounded field-api">
                     <select class="border p-2 rounded field-required">
@@ -255,7 +255,7 @@
             console.log('🌐 Instance URL:', instanceUrl || '[MISSING]');
             console.log('📦 metadata.zip (Base64):', zipFile ? zipFile.substring(0, 100) + '...' : '[MISSING]');
 
-            alert('✅ Check console for values. Make sure all 3 are present.');
+            alert('Check console for values. Make sure all 3 are present.');
         }
 
         async function deployToSalesforce() {
@@ -264,7 +264,7 @@
             const zipFile = document.getElementById('base64Text').value.trim();
 
             if (!accessToken || !instanceUrl || !zipFile) {
-                alert('⚠️ Missing access token, instance URL, or metadata.');
+                alert(' Missing access token, instance URL, or metadata.');
                 return;
             }
 
