@@ -105,7 +105,6 @@ def generate_layout_xml(api_name, fields):
             <layoutItems>
                 <field>{name}</field>
             </layoutItems>"""
-
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Layout xmlns="http://soap.sforce.com/2006/04/metadata">
     <layoutSections>
@@ -133,27 +132,28 @@ def generate_tab_xml(label, api_name):
 
 def generate_profile_xml(custom_object_apis, custom_objects, standard_fields):
     permissions = ""
+    tab_visibilities = ""
+    object_access = ""
 
     for obj, api in zip(custom_objects, custom_object_apis):
+        # Add tab visibility
+        tab_visibilities += f"""
+    <tabVisibilities>
+        <tab>{api}</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>"""
+
+        # Add field permissions
         for field in obj['fields']:
-            name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
+            field_name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
             permissions += f"""
     <fieldPermissions>
-        <field>{api}.{name}</field>
+        <field>{api}.{field_name}</field>
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>"""
 
-    for sf in standard_fields:
-        permissions += f"""
-    <fieldPermissions>
-        <field>{sf['object']}.{sf['field']}</field>
-        <readable>true</readable>
-        <editable>true</editable>
-    </fieldPermissions>"""
-
-    object_access = ""
-    for api in custom_object_apis:
+        # Add object permissions
         object_access += f"""
     <objectPermissions>
         <object>{api}</object>
@@ -165,11 +165,22 @@ def generate_profile_xml(custom_object_apis, custom_objects, standard_fields):
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>"""
 
+    # Add standard field permissions
+    for sf in standard_fields:
+        permissions += f"""
+    <fieldPermissions>
+        <field>{sf['object']}.{sf['field']}</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>"""
+
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Profile xmlns="http://soap.sforce.com/2006/04/metadata">
+    {tab_visibilities}
     {permissions}
     {object_access}
 </Profile>"""
+
 
 
 def generate_custom_field_xml(field_name, label, field_type):
