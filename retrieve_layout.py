@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 # STEP 1: Start the retrieve request
 # -----------------------------------------
 def retrieve_layout_metadata(access_token, instance_url, layout_full_name):
-    url = f"{instance_url}/services/Soap/m/60.0"
+    url = f"{instance_url}/services/Soap/m/63.0"
     headers = {
         "Content-Type": "text/xml",
         "SOAPAction": "retrieve"
@@ -53,7 +53,7 @@ def retrieve_layout_metadata(access_token, instance_url, layout_full_name):
 # STEP 2: Poll until the ZIP is ready
 # -----------------------------------------
 def check_retrieve_status(access_token, instance_url, retrieve_id):
-    url = f"{instance_url}/services/Soap/m/60.0"
+    url = f"{instance_url}/services/Soap/m/63.0"
     headers = {
         "Content-Type": "text/xml",
         "SOAPAction": "checkRetrieveStatus"
