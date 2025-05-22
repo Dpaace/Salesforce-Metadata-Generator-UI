@@ -97,9 +97,9 @@ def extract_layout_from_response(xml_response, target_file_keyword='Layout'):
     if status is not None and status.text == 'Failed':
         error_msg = result.find('m:messages/m:problem', namespace)
         if error_msg is not None:
-            raise Exception(f"❌ Metadata retrieve failed: {error_msg.text}")
+            raise Exception(f"Metadata retrieve failed: {error_msg.text}")
         else:
-            raise Exception("❌ Metadata retrieve failed with unknown error.")
+            raise Exception("Metadata retrieve failed with unknown error.")
 
     done = result.find('m:done', namespace).text.lower() == 'true'
     if not done:
@@ -115,15 +115,73 @@ def extract_layout_from_response(xml_response, target_file_keyword='Layout'):
                 with zip_file.open(file_name) as f:
                     return f.read().decode('utf-8')
 
-    raise Exception("❌ Layout XML not found in the retrieved ZIP.")
+    raise Exception(" Layout XML not found in the retrieved ZIP.")
 
 
 # -----------------------------------------
 # MERGE
 # -----------------------------------------
 
+# def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
+#     import xml.etree.ElementTree as ET
+
+#     # Collect all fields from UI (using fallback)
+#     new_field_names = set()
+#     for field in fields:
+#         name = field.get('apiName') or field.get('label', '').replace(' ', '_') + '__c'
+#         new_field_names.add(name)
+
+#     all_fields = set(new_field_names)
+#     all_fields.add("Name")  # Always required
+
+#     # Collect all fields from existing layout, if present
+#     if existing_layout_xml:
+#         ns = {'ns': 'http://soap.sforce.com/2006/04/metadata'}
+#         root = ET.fromstring(existing_layout_xml)
+#         for item in root.findall(".//ns:layoutItems", ns):
+#             field_elem = item.find("ns: field", ns)
+#             if field_elem is not None and field_elem.text:
+#                 all_fields.add(field_elem.text.strip())
+
+#     # Build the final layout items
+#     layout_items = ""
+#     for field_name in sorted(all_fields):
+#         if field_name == "Name":
+#             layout_items += f"""
+#             <layoutItems>
+#                 <behavior>Required</behavior>
+#                 <field>{field_name}</field>
+#             </layoutItems>"""
+#         else:
+#             layout_items += f"""
+#             <layoutItems>
+#                 <behavior>Edit</behavior>
+#                 <field>{field_name}</field>
+#             </layoutItems>"""
+
+#     return f"""<?xml version="1.0" encoding="UTF-8"?>
+# <Layout xmlns="http://soap.sforce.com/2006/04/metadata">
+#     <layoutSections>
+#         <customLabel>false</customLabel>
+#         <detailHeading>true</detailHeading>
+#         <editHeading>true</editHeading>
+#         <label>Information</label>
+#         <layoutColumns>
+#             {layout_items}
+#         </layoutColumns>
+#         <style>TwoColumnsTopToBottom</style>
+#     </layoutSections>
+# </Layout>"""
+
+
 def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
-    new_field_names = {f['apiName'] for f in fields}
+    import xml.etree.ElementTree as ET
+
+    new_field_names = set()
+    for field in fields:
+        name = field.get('apiName') or field.get('label', '').replace(' ', '_') + '__c'
+        new_field_names.add(name)
+
     all_fields = set(new_field_names)
     all_fields.add("Name")  # Always required
 
@@ -131,11 +189,10 @@ def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
         ns = {'ns': 'http://soap.sforce.com/2006/04/metadata'}
         root = ET.fromstring(existing_layout_xml)
         for item in root.findall(".//ns:layoutItems", ns):
-            field_elem = item.find("ns:field", ns)
-            if field_elem is not None:
+            field_elem = item.find("ns:field", ns)  # <-- fixed here!
+            if field_elem is not None and field_elem.text:
                 all_fields.add(field_elem.text.strip())
 
-    # Now build layout XML from scratch (based on your original structure)
     layout_items = ""
     for field_name in sorted(all_fields):
         if field_name == "Name":
@@ -168,15 +225,15 @@ def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
 
 
 
+
 # -----------------------------------------
 # MAIN EXECUTION
 # -----------------------------------------
 if __name__ == "__main__":
-    # 🔐 Replace with your actual values
-    access_token = '00DdM00000B48zI!AQEAQFogkfWYnf5ArVVISty7Tuprg5wNsXkGaxX5mqdIMWrEP0.GY2JTTITA3Bfbrus3Kl6hMF6DcdQo_GZBRsiO1iD76K_2'
+    access_token = '00DdM00000B48zI!AQEAQFwJnM6PGhTQs_fTdeswxdcfZTnszDe6GBb4Fn8LzXgdh6oaWMpLpo_1w5K4.Db9f6oX3ZeYYXqTxSk3B.vMqTo9VT1b'
     instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'
-    # layout_full_name = 'Account-Account Layout'  # e.g., 'Custom_Object__c-Custom_Object Layout'
-    layout_full_name = 'Mass_Upload__c-Mass Upload Layout'
+    layout_full_name = 'Case-Case Layout'  # e.g., 'Custom_Object__c-Custom_Object Layout'
+    # layout_full_name = 'Mass_Upload__c-Mass Upload Layout'
     # layout_full_name = 'Case-Case Layout'
     
     print("[*] Starting layout retrieval...")
@@ -184,35 +241,34 @@ if __name__ == "__main__":
         retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
         print(f"[+] Retrieve request ID: {retrieve_id}")
     except Exception as e:
-        print(f"❌ Failed to start retrieve: {str(e)}")
+        print(f"Failed to start retrieve: {str(e)}")
         exit(1)
 
-    # ⏱️ Polling loop
+    # Polling loop
     MAX_ATTEMPTS = 10
     WAIT_SECONDS = 3
 
     for attempt in range(MAX_ATTEMPTS):
-        print(f"[*] Polling attempt {attempt + 1}...")
+        print(f"Polling attempt {attempt + 1}...")
         try:
             status_response = check_retrieve_status(access_token, instance_url, retrieve_id)
             layout_xml = extract_layout_from_response(status_response)
             if layout_xml:
-                print("[✅] Layout XML retrieved successfully.")
+                print("Layout XML retrieved successfully.")
                 print(layout_xml[:1000])  # preview first 1000 chars
                 break
         except Exception as e:
             print(str(e))
             break
 
-        print(f"[*] Not ready yet. Sleeping {WAIT_SECONDS} seconds...\n")
+        print(f"Not ready yet. Sleeping {WAIT_SECONDS} seconds...\n")
         time.sleep(WAIT_SECONDS)
     else:
-        print("❌ Retrieval timed out after multiple attempts.")
+        print("Retrieval timed out after multiple attempts.")
         
     # Define new fields you want to add
     new_fields = [
-        {'apiName': 'Subscription_Status__c'},
-        {'apiName': 'Test_Now__c'}
+        {'apiName': 'Today__c'}
     ]
 
     if layout_xml:
@@ -227,7 +283,7 @@ if __name__ == "__main__":
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(final_xml)
 
-    print(f"\n[✅] Final layout XML written to: {output_file}")
+    print(f"\nFinal layout XML written to: {output_file}")
 
 
 

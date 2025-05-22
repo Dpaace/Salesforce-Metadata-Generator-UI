@@ -14,13 +14,25 @@ app = Flask(__name__)
 
 @app.route('/generate', methods=['POST'])
 def generate_metadata():
-    objects = request.get_json()
+    # objects = request.get_json()
+
+    # session_id = str(uuid.uuid4())
+    # base_folder = f'metadata/{session_id}'
+    # os.makedirs(base_folder, exist_ok=True)
+
+    # create_metadata_folder(base_folder, objects)
+    
+    payload = request.get_json()
+    objects = payload.get('objects')
+    access_token = payload.get('access_token')
+    instance_url = payload.get('instance_url')
 
     session_id = str(uuid.uuid4())
     base_folder = f'metadata/{session_id}'
     os.makedirs(base_folder, exist_ok=True)
 
-    create_metadata_folder(base_folder, objects)
+    # Pass tokens to create_metadata_folder
+    create_metadata_folder(base_folder, objects, access_token, instance_url)
 
     zip_path = f'{base_folder}.zip'
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:

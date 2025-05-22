@@ -210,11 +210,21 @@
             try {
                 
 
+                //const response = await fetch('/generate', {
+                //    method: 'POST',
+                //    headers: { 'Content-Type': 'application/json' },
+                //    body: JSON.stringify(objects)
+                //});
+
+                const access_token = localStorage.getItem('sf_access_token');
+                const instance_url = localStorage.getItem('sf_instance_url');
+
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(objects)
+                    body: JSON.stringify({ objects, access_token, instance_url })
                 });
+
 
                 if (!response.ok) throw new Error('Failed to generate metadata.zip');
 

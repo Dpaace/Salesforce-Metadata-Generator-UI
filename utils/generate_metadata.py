@@ -1,6 +1,6 @@
 import os
 
-def create_metadata_folder(base_path, objects):
+def create_metadata_folder(base_path, objects, access_token=None, instance_url=None):
     object_folder = os.path.join(base_path, 'objects')
     fields_folder = os.path.join(base_path, 'objects/fields')
     layout_folder = os.path.join(base_path, 'layouts')
@@ -33,8 +33,37 @@ def create_metadata_folder(base_path, objects):
                 f.write(generate_object_xml(label, plural, api, fields))
 
             # Create layout
-            with open(os.path.join(layout_folder, f"{api}-{label} Layout.layout"), 'w') as f:
-                f.write(generate_layout_xml(api, fields))
+            # with open(os.path.join(layout_folder, f"{api}-{label} Layout.layout"), 'w') as f:
+            #     f.write(generate_layout_xml(api, fields))
+            
+            from retrieve_layout import (
+                retrieve_layout_metadata,
+                check_retrieve_status,
+                extract_layout_from_response,
+                generate_layout_xml  # Make sure to import this updated version
+            )
+            import time
+
+            layout_filename = f"{api}-{label} Layout"
+            layout_file_path = os.path.join(layout_folder, f"{layout_filename}.layout")
+
+            existing_layout_xml = None
+            if access_token and instance_url:
+                try:
+                    retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_filename)
+                    for _ in range(10):
+                        status_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+                        existing_layout_xml = extract_layout_from_response(status_response)
+                        if existing_layout_xml:
+                            break
+                        time.sleep(3)
+                except Exception as e:
+                    print(f"[!] Layout retrieval failed: {e}")
+
+            merged_layout_xml = generate_layout_xml(api, fields, existing_layout_xml)
+            with open(layout_file_path, "w", encoding="utf-8") as f:
+                f.write(merged_layout_xml)
+
 
             # Create tab
             with open(os.path.join(tab_folder, f"{api}.tab"), 'w') as f:
@@ -92,7 +121,7 @@ def generate_object_xml(label, plural, api_name, fields):
 </CustomObject>"""
 
 
-def generate_layout_xml(api_name, fields):
+def generate_layout_xml_old(api_name, fields):
     layout_items = """
             <layoutItems>
                 <behavior>Required</behavior>
