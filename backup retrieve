@@ -1,0 +1,138 @@
+
+import requests
+import time
+import base64
+import zipfile
+import io
+import xml.etree.ElementTree as ET
+
+# -----------------------------------------
+# STEP 1: Start the retrieve request
+# -----------------------------------------
+def retrieve_layout_metadata(access_token, instance_url, layout_full_name):
+    url = f"{instance_url}/services/Soap/m/60.0"
+    headers = {
+        "Content-Type": "text/xml",
+        "SOAPAction": "retrieve"
+    }
+
+    soap_body = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:met="http://soap.sforce.com/2006/04/metadata">
+      <env:Header>
+        <met:SessionHeader>
+          <met:sessionId>{access_token}</met:sessionId>
+        </met:SessionHeader>
+      </env:Header>
+      <env:Body>
+        <met:retrieve>
+          <met:retrieveRequest>
+            <met:apiVersion>60.0</met:apiVersion>
+            <met:singlePackage>true</met:singlePackage>
+            <met:unpackaged>
+              <met:types>
+                <met:members>{layout_full_name}</met:members>
+                <met:name>Layout</met:name>
+              </met:types>
+            </met:unpackaged>
+          </met:retrieveRequest>
+        </met:retrieve>
+      </env:Body>
+    </env:Envelope>"""
+
+    response = requests.post(url, data=soap_body.encode("utf-8"), headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Retrieve request failed: {response.status_code}\n{response.text}")
+
+    tree = ET.fromstring(response.text)
+    namespace = {'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/',
+                 'sf': 'http://soap.sforce.com/2006/04/metadata'}
+    return tree.find('.//sf:id', namespace).text
+
+# -----------------------------------------
+# STEP 2: Poll until the ZIP is ready
+# -----------------------------------------
+def check_retrieve_status(access_token, instance_url, retrieve_id):
+    url = f"{instance_url}/services/Soap/m/60.0"
+    headers = {
+        "Content-Type": "text/xml",
+        "SOAPAction": "checkRetrieveStatus"
+    }
+
+    soap_body = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:met="http://soap.sforce.com/2006/04/metadata">
+      <env:Header>
+        <met:SessionHeader>
+          <met:sessionId>{access_token}</met:sessionId>
+        </met:SessionHeader>
+      </env:Header>
+      <env:Body>
+        <met:checkRetrieveStatus>
+          <met:asyncProcessId>{retrieve_id}</met:asyncProcessId>
+          <met:includeZip>true</met:includeZip>
+        </met:checkRetrieveStatus>
+      </env:Body>
+    </env:Envelope>"""
+
+    response = requests.post(url, headers=headers, data=soap_body.encode("utf-8"))
+    if response.status_code != 200:
+        raise Exception(f"Retrieve status check failed: {response.status_code}\n{response.text}")
+    return response.text
+
+# -----------------------------------------
+# STEP 3: Extract layout XML from ZIP in memory
+# -----------------------------------------
+def extract_layout_from_response(xml_response, target_file_keyword='Layout'):
+    tree = ET.ElementTree(ET.fromstring(xml_response))
+    namespace = {'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/', 'm': 'http://soap.sforce.com/2006/04/metadata'}
+    result = tree.find('.//m:result', namespace)
+
+    done = result.find('m:done', namespace).text.lower() == 'true'
+    if not done:
+        return None
+
+    zip_base64 = result.find('m:zipFile', namespace).text
+    zip_data = base64.b64decode(zip_base64)
+
+    with zipfile.ZipFile(io.BytesIO(zip_data), 'r') as zip_file:
+        for file_name in zip_file.namelist():
+            if target_file_keyword in file_name and file_name.endswith('.layout'):
+                print(f"[+] Found: {file_name}")
+                with zip_file.open(file_name) as f:
+                    return f.read().decode('utf-8')
+    return None
+
+# -----------------------------------------
+# RUN THE PROCESS
+# -----------------------------------------
+if __name__ == "__main__":
+    # Set your values here:
+    access_token = '00DdM00000B48zI!AQEAQPB_aIFm_6ZU0uV1.MWPxOuS8Hf8uh1Z2E8oxtXDkEE9VTEBnefD_7PEORnEU7NVo62ilBF_LLyBK0tINPFPL74tIXvG'
+    instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'
+    layout_full_name = 'Account-Account Layout'  # e.g., 'Custom_Object__c-Custom_Object Layout'
+
+    print("[*] Starting layout retrieval...")
+    retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
+    print(f"[+] Retrieve request ID: {retrieve_id}")
+
+    # Poll every 3 seconds until it's done
+    for attempt in range(10):
+        print(f"[*] Polling attempt {attempt+1}...")
+        status_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+        layout_xml = extract_layout_from_response(status_response)
+        if layout_xml:
+            print("[✅] Layout XML retrieved successfully.\n")
+            print(layout_xml)  # preview first 1000 chars
+            break
+        else:
+            print("[*] Layout not ready yet. Sleeping 3 seconds...")
+            time.sleep(3)
+    else:
+        print("❌ Retrieval timed out.")
+
+
+
+access_token = '00DdM00000B48zI!AQEAQPB_aIFm_6ZU0uV1.MWPxOuS8Hf8uh1Z2E8oxtXDkEE9VTEBnefD_7PEORnEU7NVo62ilBF_LLyBK0tINPFPL74tIXvG'
+instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'

@@ -2,162 +2,295 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Salesforce Metadata Generator</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce Metadata Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gray-100 min-h-screen p-8">
+<body class="bg-gray-800 min-h-screen p-8">
 
-  <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-md">
-    <h1 class="text-3xl font-bold mb-6 text-center">Salesforce Metadata Generator</h1>
+    <div class="max-w-5xl mx-auto bg-gray-600 p-8 rounded-xl shadow-md">
+        <h1 class="text-3xl font-bold mb-6 text-center">Salesforce Metadata Generator</h1>
 
-    <!-- Object Info -->
-    <div class="mb-8">
-      <h2 class="text-xl font-semibold mb-4">Object Information</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input id="objectLabel" type="text" placeholder="Object Label" class="border p-2 rounded">
-        <input id="objectApiName" type="text" placeholder="Object API Name (e.g., MyObject)"
-          class="border p-2 rounded">
-        <input id="objectPluralLabel" type="text" placeholder="Plural Label" class="border p-2 rounded">
-      </div>
-    </div>
+        <!-- Object Sections Container -->
+        <div id="objectsContainer" class="space-y-8"></div>
 
-    <!-- Fields -->
-    <div class="mb-8">
-      <h2 class="text-xl font-semibold mb-4">Fields</h2>
-      <div id="fieldsContainer" class="space-y-4"></div>
-      <button onclick="addField()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">+ Add Field</button>
-    </div>
-
-    <!-- Generate Button -->
-    <div class="text-center">
-      <button onclick="generateZip()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded text-lg">
-        Generate metadata.zip
-      </button>
-    </div>
-
-    <!-- Base64 Output (Hidden initially) -->
-    <div id="base64Output" class="hidden mt-8 bg-white p-6 rounded-lg shadow-md">
-      <h2 class="text-2xl font-semibold mb-4">Base64 Encoded metadata.zip</h2>
-      <textarea id="base64Text" class="w-full h-64 border p-4 rounded" readonly></textarea>
-      <div class="text-center mt-4">
-        <button onclick="copyBase64()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded">
-          Copy to Clipboard
-        </button>
-      </div>
-    </div>
-
-  </div>
-
-  <script>
-    function addField() {
-      const container = document.getElementById('fieldsContainer');
-      const fieldHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-          <input type="text" placeholder="Field Label" class="border p-2 rounded field-label">
-          <select class="border p-2 rounded field-type">
-            <option value="Text">Text</option>
-            <option value="Number">Number</option>
-            <option value="Date">Date</option>
-            <option value="Picklist">Picklist</option>
-            <option value="Checkbox">Checkbox</option>
-          </select>
-          <input type="text" placeholder="API Name (optional)" class="border p-2 rounded field-api">
-          <select class="border p-2 rounded field-required">
-            <option value="false">Optional</option>
-            <option value="true">Required</option>
-          </select>
+        <div class="text-center mb-8">
+            <button onclick="addObject()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg">
+                + Add Object
+            </button>
         </div>
-      `;
-      container.insertAdjacentHTML('beforeend', fieldHTML);
-    }
 
-    async function generateZip() {
-      const objectLabel = document.getElementById('objectLabel').value;
-      const objectApiName = document.getElementById('objectApiName').value;
-      const objectPluralLabel = document.getElementById('objectPluralLabel').value;
+        <!-- Generate Button -->
+        <div class="text-center">
+            <button onclick="generateZip()"
+                class="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-lg text-xl">
+                Generate metadata.zip
+            </button>
+        </div>
 
-      if (!objectLabel || !objectApiName || !objectPluralLabel) {
-        alert('Please fill in all object information fields.');
-        return;
-      }
+        <!-- Base64 Output Section -->
+        <div id="base64Output" class="hidden mt-10 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Base64 Encoded metadata.zip</h2>
+            <textarea id="base64Text" class="w-full h-64 border p-4 rounded" readonly></textarea>
+            <div class="text-center mt-4">
+                <button onclick="copyBase64()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded">
+                    Copy to Clipboard
+                </button>
+            </div>
+            <button onclick="debugDeployInputs()"
+                class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-2 rounded mt-4">
+                🧪 Debug Deployment Inputs
+            </button>
+            <div class="text-center mt-4">
+                <button onclick="deployToSalesforce()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded">
+                    Deploy to Salesforce
+                </button>
+            </div>
+        </div>
+    </div>
 
-      const fields = [];
-      const fieldLabels = document.querySelectorAll('.field-label');
-      const fieldTypes = document.querySelectorAll('.field-type');
-      const fieldApis = document.querySelectorAll('.field-api');
-      const fieldRequireds = document.querySelectorAll('.field-required');
+    <script>
+        let objectCounter = 0;
 
-      for (let i = 0; i < fieldLabels.length; i++) {
-        if (fieldLabels[i].value.trim() === '') continue;
-        fields.push({
-          label: fieldLabels[i].value.trim(),
-          type: fieldTypes[i].value,
-          apiName: fieldApis[i].value.trim(),
-          required: fieldRequireds[i].value === 'true'
-        });
-      }
+        function addObject() {
+            const currentCount = document.querySelectorAll('[id^="object-"]').length + 1;
+            const objectId = `object-${currentCount}`;
+            const container = document.getElementById('objectsContainer');
 
-      if (fields.length === 0) {
-        alert('Please add at least one field.');
-        return;
-      }
+            const objectHTML = `
+              <div class="p-6 border rounded-lg bg-gray-50" id="${objectId}">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-2xl font-bold">Object ${currentCount}</h2>
+                  <button onclick="removeObject(this)" class="text-red-600 hover:text-red-800 text-sm">
+                    🗑 Remove Object
+                  </button>
+                </div>
 
-      const payload = {
-        objectLabel,
-        objectApiName,
-        objectPluralLabel,
-        fields
-      };
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <input type="text" placeholder="Object Label" class="border p-2 rounded object-label">
+                  <input type="text" placeholder="API Name" class="border p-2 rounded object-api">
+                  <input type="text" placeholder="Plural Label" class="border p-2 rounded object-plural">
+                  <select class="border p-2 rounded object-type" onchange="togglePlural(this)">
+                    <option value="custom">Custom Object</option>
+                    <option value="standard">Standard Object</option>
+                  </select>
+                </div>
 
-      try {
-        const response = await fetch('/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
+                <div>
+                  <h3 class="text-lg font-semibold mb-2">Fields</h3>
+                  <div class="space-y-4 fieldsContainer"></div>
+                  <button onclick="addField(this)" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    + Add Field
+                  </button>
+                </div>
+              </div>
+            `;
 
-        if (!response.ok) {
-          throw new Error('Failed to generate metadata.zip');
+            container.insertAdjacentHTML('beforeend', objectHTML);
         }
 
-        const blob = await response.blob();
-
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-
-        reader.onloadend = function() {
-          const base64data = reader.result.split(',')[1]; // Only base64 part
-
-          // Insert Base64 into textarea
-          document.getElementById('base64Text').value = base64data;
-
-          // Show the output section
-          document.getElementById('base64Output').classList.remove('hidden');
-
-          // Scroll to base64 output
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        function togglePlural(select) {
+            const container = select.closest('[id^="object-"]');
+            const pluralInput = container.querySelector('.object-plural');
+            if (select.value === 'standard') {
+                pluralInput.disabled = true;
+                pluralInput.placeholder = 'N/A for standard object';
+                pluralInput.value = '';
+            } else {
+                pluralInput.disabled = false;
+                pluralInput.placeholder = 'Plural Label';
+            }
         }
 
-      } catch (error) {
-        console.error(error);
-        alert('Error generating metadata.');
-      }
-    }
+        function addField(button) {
+            const fieldsContainer = button.previousElementSibling;
+            const fieldHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center field-row">
+                    <input type="text" placeholder="Field Label" class="border p-2 rounded field-label">
+                    <select class="border p-2 rounded field-type">
+                        <option value="Text">Text</option>
+                        <!-- <option value="Number">Number</option> -->
+                        <option value="Date">Date</option>
+                        <!-- <option value="Picklist">Picklist</option> -->
+                        <!-- <option value="Checkbox">Checkbox</option> -->
+                    </select>
+                    <input type="text" placeholder="API Name (optional)" class="border p-2 rounded field-api">
+                    <select class="border p-2 rounded field-required">
+                        <option value="false">Optional</option>
+                        <option value="true">Required</option>
+                    </select>
+                    <button onclick="removeField(this)" class="text-red-600 hover:text-red-800 text-sm">✖</button>
+                </div>
+            `;
+            fieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
+        }
 
-    function copyBase64() {
-      const textarea = document.getElementById('base64Text');
-      textarea.select();
-      textarea.setSelectionRange(0, 99999); // Mobile compatibility
+        function removeField(button) {
+            const fieldRow = button.closest('.field-row');
+            fieldRow.remove();
+        }
 
-      document.execCommand('copy');
-      alert('Base64 text copied to clipboard!');
-    }
-  </script>
+        function removeObject(button) {
+            const objectBlock = button.closest('[id^="object-"]');
+            objectBlock.remove();
+            updateObjectTitles();
+        }
+
+        function updateObjectTitles() {
+            const objectSections = document.querySelectorAll('[id^="object-"]');
+            objectSections.forEach((section, index) => {
+                section.id = `object-${index + 1}`;
+                const header = section.querySelector('h2');
+                if (header) {
+                    header.textContent = `Object ${index + 1}`;
+                }
+            });
+        }
+
+        async function generateZip() {
+            const objectSections = document.querySelectorAll('[id^="object-"]');
+
+            if (objectSections.length === 0) {
+                alert('Please add at least one object.');
+                return;
+            }
+
+            const objects = [];
+
+            for (const section of objectSections) {
+                const objectLabel = section.querySelector('.object-label').value.trim();
+                const objectApiName = section.querySelector('.object-api').value.trim();
+                const objectPluralLabel = section.querySelector('.object-plural').value.trim();
+                const objectType = section.querySelector('.object-type')?.value || 'custom';
+                const fieldsContainer = section.querySelector('.fieldsContainer');
+
+                if (!objectLabel || !objectApiName || (objectType === 'custom' && !objectPluralLabel)) {
+                    alert('Please fill in all required object details.');
+                    return;
+                }
+
+                const fields = [];
+                const fieldRows = fieldsContainer.querySelectorAll('.field-row');
+                for (const row of fieldRows) {
+                    const label = row.querySelector('.field-label').value.trim();
+                    const type = row.querySelector('.field-type').value;
+                    const apiName = row.querySelector('.field-api').value.trim();
+                    const required = row.querySelector('.field-required').value === 'true';
+
+                    if (!label) {
+                        alert('Each field must have a label.');
+                        return;
+                    }
+
+                    fields.push({
+                        label,
+                        type,
+                        apiName,
+                        required
+                    });
+                }
+
+                objects.push({
+                    objectLabel,
+                    objectApiName,
+                    objectPluralLabel,
+                    objectType,
+                    fields
+                });
+            }
+
+            if (objects.length === 0) {
+                alert('Please complete the fields for at least one object.');
+                return;
+            }
+
+            try {
+                
+
+                //const response = await fetch('/generate', {
+                //    method: 'POST',
+                //    headers: { 'Content-Type': 'application/json' },
+                //    body: JSON.stringify(objects)
+                //});
+
+                const access_token = localStorage.getItem('sf_access_token');
+                const instance_url = localStorage.getItem('sf_instance_url');
+
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ objects, access_token, instance_url })
+                });
+
+
+                if (!response.ok) throw new Error('Failed to generate metadata.zip');
+
+                const blob = await response.blob();
+                const reader = new FileReader();
+
+                reader.onloadend = function () {
+                    const base64data = reader.result.split(',')[1];
+                    document.getElementById('base64Text').value = base64data;
+                    document.getElementById('base64Output').classList.remove('hidden');
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                };
+
+                reader.readAsDataURL(blob);
+
+            } catch (error) {
+                console.error(error);
+                alert('Error generating metadata.');
+            }
+        }
+
+
+        function copyBase64() {
+            const textarea = document.getElementById('base64Text');
+            navigator.clipboard.writeText(textarea.value)
+                .then(() => alert('Base64 text copied to clipboard!'))
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Failed to copy Base64 text. Please try manually.');
+                });
+        }
+
+        function debugDeployInputs() {
+            const accessToken = localStorage.getItem('sf_access_token');
+            const instanceUrl = localStorage.getItem('sf_instance_url');
+            const zipFile = document.getElementById('base64Text').value.trim();
+
+            console.log('🧪 Debugging Deployment Inputs:');
+            console.log('🔐 Access Token:', accessToken || '[MISSING]');
+            console.log('🌐 Instance URL:', instanceUrl || '[MISSING]');
+            console.log('📦 metadata.zip (Base64):', zipFile ? zipFile.substring(0, 100) + '...' : '[MISSING]');
+
+            alert('Check console for values. Make sure all 3 are present.');
+        }
+
+        async function deployToSalesforce() {
+            const accessToken = localStorage.getItem('sf_access_token');
+            const instanceUrl = localStorage.getItem('sf_instance_url');
+            const zipFile = document.getElementById('base64Text').value.trim();
+
+            if (!accessToken || !instanceUrl || !zipFile) {
+                alert(' Missing access token, instance URL, or metadata.');
+                return;
+            }
+
+            localStorage.setItem('sf_zip_file', zipFile);
+            localStorage.setItem('sf_deploy_in_progress', 'true');
+
+            window.location.href = '/deploying';
+        }
+
+        window.onload = function () {
+            const storedToken = localStorage.getItem('sf_access_token');
+            const storedInstanceUrl = localStorage.getItem('sf_instance_url');
+        };
+    </script>
 
 </body>
 
