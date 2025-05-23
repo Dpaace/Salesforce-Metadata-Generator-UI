@@ -176,6 +176,7 @@ def extract_layout_from_response(xml_response, target_file_keyword='Layout'):
 
 def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
     import xml.etree.ElementTree as ET
+    
 
     new_field_names = set()
     for field in fields:
@@ -232,7 +233,7 @@ def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
 if __name__ == "__main__":
     access_token = '00DdM00000B48zI!AQEAQFwJnM6PGhTQs_fTdeswxdcfZTnszDe6GBb4Fn8LzXgdh6oaWMpLpo_1w5K4.Db9f6oX3ZeYYXqTxSk3B.vMqTo9VT1b'
     instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'
-    layout_full_name = 'Case-Case Layout'  # e.g., 'Custom_Object__c-Custom_Object Layout'
+    layout_full_name = 'Account-Account Layout'  # e.g., 'Custom_Object__c-Custom_Object Layout'
     # layout_full_name = 'Mass_Upload__c-Mass Upload Layout'
     # layout_full_name = 'Case-Case Layout'
     
