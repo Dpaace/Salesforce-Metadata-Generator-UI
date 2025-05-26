@@ -5,12 +5,32 @@
         <label>Custom Text Field</label>
         <type>Text</type>
         <length>255</length>
-        <description>This is a sample custom text field on Account.</description>
-        <inlineHelpText>Displays sample text information.</inlineHelpText>
-        <required>false</required>
-        <unique>false</unique>
-        <externalId>false</externalId>
-        <trackTrending>false</trackTrending>
+        <description>Sample text field</description>
+    </fields>
+    <fields>
+        <fullName>Secondary_Text_Field__c</fullName>
+        <label>Secondary Text Field</label>
+        <type>Text</type>
+        <length>255</length>
+        <description>Another sample field</description>
+    </fields>
+    <fields>
+        <fullName>Status__c</fullName>
+        <label>Status</label>
+        <type>Picklist</type>
+        <valueSet>
+            <valueSetDefinition>
+                <value>
+                    <fullName>Active</fullName>
+                    <default>false</default>
+                </value>
+                <value>
+                    <fullName>Inactive</fullName>
+                    <default>false</default>
+                </value>
+            </valueSetDefinition>
+        </valueSet>
+        <description>Status picklist field</description>
     </fields>
     <fullName>Account</fullName>
 </CustomObject>

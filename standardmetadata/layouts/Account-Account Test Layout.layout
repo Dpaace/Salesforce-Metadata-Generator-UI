@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Layout xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- Existing section (minimal sample) -->
     <layoutSections>
         <customLabel>false</customLabel>
         <detailHeading>true</detailHeading>
@@ -14,16 +15,27 @@
                 <behavior>Edit</behavior>
                 <field>ParentId</field>
             </layoutItems>
+        </layoutColumns>
+        <style>TwoColumnsTopToBottom</style>
+    </layoutSections>
+
+    <!-- New custom fields section -->
+    <layoutSections>
+        <customLabel>true</customLabel>
+        <detailHeading>true</detailHeading>
+        <editHeading>true</editHeading>
+        <label>Custom Fields</label>
+        <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Custom_Text_Field__c</field>
             </layoutItems>
-        </layoutColumns>
-        <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Secondary_Text_Field__c</field>
             </layoutItems>
+        </layoutColumns>
+        <layoutColumns>
             <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Status__c</field>
@@ -31,5 +43,6 @@
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
     </layoutSections>
-    <fullName>Account-Account Layout</fullName>
+
+    <fullName>Account-Account Test Layout</fullName>
 </Layout>
