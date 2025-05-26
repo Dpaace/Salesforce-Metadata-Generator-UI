@@ -175,26 +175,11 @@
                 <customLink>Billing</customLink>
             </layoutItems>
         </layoutColumns>
-        <layoutColumns/>
-        <layoutColumns/>
+        <layoutColumns />
+        <layoutColumns />
         <style>CustomLinks</style>
     </layoutSections>
-    <layoutSections>
-        <customLabel>true</customLabel>
-        <detailHeading>true</detailHeading>
-        <editHeading>true</editHeading>
-        <label>Custom Fields</label>
-        <layoutColumns>
-            <layoutItems>
-                <behavior>Edit</behavior>
-                <field>Region__c</field>
-            </layoutItems>
-        </layoutColumns>
-        <layoutColumns/>
-        <style>TwoColumnsTopToBottom</style>
-    </layoutSections>
-
-    <platformActionList>
+    <layoutSections><customLabel>true</customLabel><detailHeading>true</detailHeading><editHeading>true</editHeading><label>Custom Fields</label><layoutColumns><layoutItems><behavior>Edit</behavior><field>Hello__c</field></layoutItems><layoutItems><behavior>Edit</behavior><field>World__c</field></layoutItems></layoutColumns><layoutColumns /><style>TwoColumnsTopToBottom</style></layoutSections><platformActionList>
         <actionListContext>Record</actionListContext>
         <platformActionListItems>
             <actionName>FeedItem.TextPost</actionName>
@@ -535,3 +520,4 @@
         <summaryLayoutStyle>Default</summaryLayoutStyle>
     </summaryLayout>
 </Layout>
+
