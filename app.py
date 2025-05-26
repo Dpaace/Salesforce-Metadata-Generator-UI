@@ -7,6 +7,10 @@ import uuid
 from flask import request, jsonify
 import requests
 
+from retrieve_standard_layout import retrieve_layout_metadata, check_retrieve_status, extract_layout_from_response
+import time
+
+
 PORT = 5000
 REDIRECT_URI = f'http://localhost:{PORT}/redirect.html'
 app = Flask(__name__)
@@ -60,6 +64,10 @@ def oauth_redirect():
 @app.route('/index')
 def index():
     return open('templates/index.html').read()
+  
+@app.route('/standard')
+def standard():
+    return open('templates/standard.html').read()
 
 @app.route('/success')
 def deploy_success():
@@ -176,6 +184,242 @@ def check_deploy_status():
         return response.text, response.status_code
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+      
+# def append_field_to_layout(layout_xml: str, field_api_name: str) -> str:
+#     new_section = f"""
+#     <layoutSections>
+#         <customLabel>true</customLabel>
+#         <detailHeading>true</detailHeading>
+#         <editHeading>true</editHeading>
+#         <label>Custom Fields</label>
+#         <layoutColumns>
+#             <layoutItems>
+#                 <behavior>Edit</behavior>
+#                 <field>{field_api_name}</field>
+#             </layoutItems>
+#         </layoutColumns>
+#         <layoutColumns/>
+#         <style>TwoColumnsTopToBottom</style>
+#     </layoutSections>"""
+    
+#     idx = layout_xml.rfind("</layoutSections>")
+#     if idx == -1:
+#         raise ValueError("No layoutSections found")
+    
+#     return layout_xml[:idx + len("</layoutSections>")] + new_section + layout_xml[idx + len("</layoutSections>"):]
+
+def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str:
+    import xml.etree.ElementTree as ET
+
+    ns = {'ns': 'http://soap.sforce.com/2006/04/metadata'}
+    ET.register_namespace('', ns['ns'])  # Register default namespace
+
+    root = ET.fromstring(layout_xml)
+
+    # Create one new section with all fields
+    section = ET.Element('layoutSections')
+    ET.SubElement(section, 'customLabel').text = 'true'
+    ET.SubElement(section, 'detailHeading').text = 'true'
+    ET.SubElement(section, 'editHeading').text = 'true'
+    ET.SubElement(section, 'label').text = 'Custom Fields'
+
+    column1 = ET.SubElement(section, 'layoutColumns')
+    column2 = ET.SubElement(section, 'layoutColumns')  # Empty second column
+
+    for api_name in field_api_names:
+        layout_item = ET.Element('layoutItems')
+        ET.SubElement(layout_item, 'behavior').text = 'Edit'
+        ET.SubElement(layout_item, 'field').text = api_name
+        column1.append(layout_item)
+
+    ET.SubElement(section, 'style').text = 'TwoColumnsTopToBottom'
+
+    # Find last layoutSections and insert after
+    layout_sections = root.findall('ns:layoutSections', ns)
+    if layout_sections:
+        last_section = layout_sections[-1]
+        parent = root
+        index = list(parent).index(last_section)
+        parent.insert(index + 1, section)
+    else:
+        root.append(section)
+
+    return ET.tostring(root, encoding='unicode')
+
+
+  
+def generate_object_file(object_name: str, field_api_name: str, label: str) -> str:
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>{field_api_name}</fullName>
+        <externalId>false</externalId>
+        <label>{label}</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <length>255</length>
+    </fields>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>"""
+
+
+def generate_package_xml(object_name: str, layout_name: str) -> str:
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>{object_name}</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>{layout_name}</members>
+        <name>Layout</name>
+    </types>
+    <version>63.0</version>
+</Package>"""
+
+@app.route('/append-field', methods=['POST'])
+def append_field():
+    data = request.get_json()
+    access_token = "00DdM00000B48zI!AQEAQP6GFVeamFnzVkHHyp4Ivcak8Nk8MfOI6ek5eWHb8R1elkKgJA5P4TS3L4Q1qR7JMtTaQ6P6ZDdgismJaY9TJHEVN3aj"
+    instance_url = "https://ssadminlearn123-dev-ed.develop.my.salesforce.com"
+    object_name = data['objectName']
+    fields = data['fields']  # List of {"apiName": ..., "label": ...}
+
+    layout_full_name = f"{object_name}-{object_name} Layout"
+
+    try:
+        retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
+        for _ in range(10):
+            xml_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+            layout_xml = extract_layout_from_response(xml_response)
+            if layout_xml:
+                break
+            time.sleep(2)
+
+        if not layout_xml:
+            return jsonify({"error": "Layout not retrieved"}), 500
+
+        # Append all fields to layout
+        # for field in fields:
+        #     layout_xml = append_field_to_layout(layout_xml, field['apiName'])
+        layout_xml = merge_fields_into_layout(layout_xml, [f["apiName"] for f in fields])
+
+
+        # Build combined object XML
+        field_blocks = "\n".join([
+    f"""    <fields>
+        <fullName>{f['apiName']}</fullName>
+        <externalId>false</externalId>
+        <label>{f['label']}</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <length>255</length>
+    </fields>""" for f in fields
+])
+
+
+#         object_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+# <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+# {field_blocks}
+#     <deploymentStatus>Deployed</deploymentStatus>
+#     <sharingModel>ReadWrite</sharingModel>
+# </CustomObject>"""
+
+        object_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+{field_blocks}
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>"""
+
+
+        package_xml = generate_package_xml(object_name, layout_full_name)
+
+        return jsonify({
+            "layoutXml": layout_xml,
+            "objectXml": object_xml,
+            "packageXml": package_xml
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+# @app.route('/append-field', methods=['POST'])
+# def append_field():
+#     data = request.get_json()
+#     access_token = "00DdM00000B48zI!AQEAQP6GFVeamFnzVkHHyp4Ivcak8Nk8MfOI6ek5eWHb8R1elkKgJA5P4TS3L4Q1qR7JMtTaQ6P6ZDdgismJaY9TJHEVN3aj"
+#     instance_url = "https://ssadminlearn123-dev-ed.develop.my.salesforce.com"
+#     object_name = data['objectName']
+#     field_api_name = data['fieldAPIName']
+#     field_label = field_api_name.replace("__c", "").replace("_", " ").title()
+
+#     layout_full_name = f"{object_name}-{object_name} Test Layout"
+
+#     try:
+#         retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
+#         for _ in range(10):
+#             xml_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+#             layout_xml = extract_layout_from_response(xml_response)
+#             if layout_xml:
+#                 break
+#             time.sleep(2)
+
+#         if not layout_xml:
+#             return jsonify({"error": "Layout not retrieved"}), 500
+
+#         updated_layout = append_field_to_layout(layout_xml, field_api_name)
+#         object_xml = generate_object_file(object_name, field_api_name, field_label)
+#         package_xml = generate_package_xml(object_name, layout_full_name)
+
+#         return jsonify({
+#             "layoutXml": updated_layout,
+#             "objectXml": object_xml,
+#             "packageXml": package_xml
+#         })
+
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+
+
+
+# @app.route('/append-field', methods=['POST'])
+# def append_field():
+#     # access_token = '00DdM00000B48zI!AQEAQP6GFVeamFnzVkHHyp4Ivcak8Nk8MfOI6ek5eWHb8R1elkKgJA5P4TS3L4Q1qR7JMtTaQ6P6ZDdgismJaY9TJHEVN3aj'  # Replace this
+#     # instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'
+#     data = request.get_json()
+#     access_token = "00DdM00000B48zI!AQEAQP6GFVeamFnzVkHHyp4Ivcak8Nk8MfOI6ek5eWHb8R1elkKgJA5P4TS3L4Q1qR7JMtTaQ6P6ZDdgismJaY9TJHEVN3aj"
+#     instance_url = "https://ssadminlearn123-dev-ed.develop.my.salesforce.com"
+#     object_name = data['objectName']
+#     field_api_name = data['fieldAPIName']
+    
+#     layout_full_name = f"{object_name}-{object_name} Layout"
+
+#     try:
+#         retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
+#         for _ in range(10):
+#             xml_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+#             layout_xml = extract_layout_from_response(xml_response)
+#             if layout_xml:
+#                 break
+#             time.sleep(2)
+        
+#         if not layout_xml:
+#             return jsonify({"error": "Layout not retrieved"}), 500
+        
+#         updated_layout = append_field_to_layout(layout_xml, field_api_name)
+
+#         return jsonify({"updatedLayoutXml": updated_layout})
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+ 
 
 
 if __name__ == '__main__':

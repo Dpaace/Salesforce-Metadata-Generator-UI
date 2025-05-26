@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Layout Merge Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-800 min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8 space-y-6">
+        <h1 class="text-3xl font-bold text-center text-blue-700">Salesforce Layout Merger</h1>
+        <p class="text-gray-600 text-center">Append custom fields into existing standard object layouts</p>
+
+        <!-- Object Selection -->
+        <div>
+            <label class="block text-sm font-semibold mb-1 text-gray-700">Standard Object</label>
+            <select id="objectName"
+                class="w-full border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-blue-200 p-2">
+                <option value="Account">Account</option>
+                <option value="Contact">Contact</option>
+            </select>
+        </div>
+
+        <!-- Field API Name -->
+        <!-- <div>
+            <label class="block text-sm font-semibold mb-1 text-gray-700">Field API Name</label>
+            <input type="text" id="fieldAPIName" placeholder="e.g., Region__c"
+                class="w-full border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-blue-200 p-2" />
+        </div> -->
+
+        <!-- Collapsible Custom Fields Section -->
+        <div class="bg-white border rounded-lg shadow-md">
+            <div class="flex items-center justify-between px-4 py-3 bg-gray-100 border-b">
+                <h2 class="text-lg font-semibold text-gray-800">Custom Fields</h2>
+                <button onclick="toggleFields()" class="text-blue-600 text-sm hover:underline" id="toggleBtn">
+                    Collapse ▲
+                </button>
+            </div>
+
+            <div id="fieldsContainer" class="space-y-4 p-4">
+                <!-- Field Block Template -->
+                <div class="fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative">
+                    <button onclick="removeField(this)"
+                        class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
+                    <h3 class="text-sm font-medium text-gray-600">Custom Field 1</h3>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
+                        <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded"
+                            placeholder="e.g., Region" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
+                        <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded"
+                            placeholder="e.g., Region__c" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-4 pb-4">
+                <button type="button" onclick="addField()" class="text-sm text-blue-600 hover:underline mt-2">
+                    ➕ Add Another Field
+                </button>
+            </div>
+        </div>
+
+
+
+
+        <!-- Submit Button -->
+        <div class="flex justify-center">
+            <button onclick="appendField()"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-200 shadow-md">
+                Append Field to Layout
+            </button>
+        </div>
+
+        <!-- Result -->
+        <!-- <div id="result" class="hidden mt-6">
+      <h2 class="text-lg font-semibold text-gray-800">Updated Layout XML</h2>
+      <pre id="layoutOutput" class="bg-gray-50 p-4 rounded-lg shadow-inner border text-sm overflow-x-auto whitespace-pre-wrap mt-2 max-h-96"></pre>
+    </div> -->
+
+        <div id="result" class="hidden mt-6 space-y-6">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-800">📄 Updated Layout XML</h2>
+                <pre id="layoutOutput"
+                    class="bg-gray-50 p-4 rounded-lg border text-sm overflow-x-auto whitespace-pre-wrap max-h-96"></pre>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-semibold text-gray-800">📄 Generated Custom Object</h2>
+                <pre id="objectOutput"
+                    class="bg-gray-50 p-4 rounded-lg border text-sm overflow-x-auto whitespace-pre-wrap max-h-96"></pre>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-semibold text-gray-800">📦 package.xml</h2>
+                <pre id="packageOutput"
+                    class="bg-gray-50 p-4 rounded-lg border text-sm overflow-x-auto whitespace-pre-wrap max-h-96"></pre>
+            </div>
+        </div>
+
+
+    </div>
+
+
+    <script>
+        let fieldCount = 1;
+        let isCollapsed = false;
+
+        function addField() {
+            fieldCount++;
+
+            const container = document.getElementById("fieldsContainer");
+
+            const block = document.createElement("div");
+            block.className = "fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative";
+            block.innerHTML = `
+      <button onclick="removeField(this)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
+      <h3 class="text-sm font-medium text-gray-600">Custom Field ${fieldCount}</h3>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
+        <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., New Label" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
+        <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., NewLabel__c" />
+      </div>
+    `;
+            container.appendChild(block);
+        }
+
+        function removeField(button) {
+            const block = button.closest(".fieldBlock");
+            block.remove();
+        }
+
+        function toggleFields() {
+            const container = document.getElementById("fieldsContainer");
+            const toggleBtn = document.getElementById("toggleBtn");
+
+            isCollapsed = !isCollapsed;
+            container.style.display = isCollapsed ? "none" : "block";
+            toggleBtn.textContent = isCollapsed ? "Expand ▼" : "Collapse ▲";
+        }
+    </script>
+
+
+    <script>
+        async function appendField() {
+            const objectName = document.getElementById("objectName").value;
+
+            const fields = [];
+            const fieldBlocks = document.querySelectorAll(".fieldBlock");
+            fieldBlocks.forEach(block => {
+                const apiName = block.querySelector("input[name='apiName']").value.trim();
+                const label = block.querySelector("input[name='label']").value.trim();
+                if (apiName && label) fields.push({ apiName, label });
+            });
+
+            const response = await fetch("/append-field", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    objectName,
+                    fields,
+                }),
+            });
+
+            const data = await response.json();
+            if (data.layoutXml) {
+                document.getElementById("layoutOutput").textContent = data.layoutXml;
+                document.getElementById("objectOutput").textContent = data.objectXml;
+                document.getElementById("packageOutput").textContent = data.packageXml;
+                document.getElementById("result").classList.remove("hidden");
+            } else {
+                alert(data.error || "Something went wrong.");
+            }
+        }
+
+    </script>
+
+    <!-- <script>
+        async function appendField() {
+            const objectName = document.getElementById("objectName").value;
+            const fieldAPIName = document.getElementById("fieldAPIName").value;
+
+            const response = await fetch("/append-field", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ objectName, fieldAPIName }),
+            });
+
+            const data = await response.json();
+
+            if (data.layoutXml) {
+                document.getElementById("layoutOutput").textContent = data.layoutXml;
+                document.getElementById("objectOutput").textContent = data.objectXml;
+                document.getElementById("packageOutput").textContent = data.packageXml;
+                document.getElementById("result").classList.remove("hidden");
+            } else {
+                alert(data.error || "Something went wrong.");
+            }
+        }
+
+    </script> -->
+    <!-- <script>
+    async function appendField() {
+      const objectName = document.getElementById("objectName").value;
+      const fieldAPIName = document.getElementById("fieldAPIName").value;
+
+      const response = await fetch("/append-field", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectName, fieldAPIName }),
+      });
+
+      const data = await response.json();
+      if (data.updatedLayoutXml) {
+        document.getElementById("layoutOutput").textContent = data.updatedLayoutXml;
+        document.getElementById("result").classList.remove("hidden");
+      } else {
+        alert(data.error || "Something went wrong.");
+      }
+    }
+  </script> -->
+
+</body>
+
+</html>
