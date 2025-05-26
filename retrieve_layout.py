@@ -122,57 +122,6 @@ def extract_layout_from_response(xml_response, target_file_keyword='Layout'):
 # MERGE
 # -----------------------------------------
 
-# def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
-#     import xml.etree.ElementTree as ET
-
-#     # Collect all fields from UI (using fallback)
-#     new_field_names = set()
-#     for field in fields:
-#         name = field.get('apiName') or field.get('label', '').replace(' ', '_') + '__c'
-#         new_field_names.add(name)
-
-#     all_fields = set(new_field_names)
-#     all_fields.add("Name")  # Always required
-
-#     # Collect all fields from existing layout, if present
-#     if existing_layout_xml:
-#         ns = {'ns': 'http://soap.sforce.com/2006/04/metadata'}
-#         root = ET.fromstring(existing_layout_xml)
-#         for item in root.findall(".//ns:layoutItems", ns):
-#             field_elem = item.find("ns: field", ns)
-#             if field_elem is not None and field_elem.text:
-#                 all_fields.add(field_elem.text.strip())
-
-#     # Build the final layout items
-#     layout_items = ""
-#     for field_name in sorted(all_fields):
-#         if field_name == "Name":
-#             layout_items += f"""
-#             <layoutItems>
-#                 <behavior>Required</behavior>
-#                 <field>{field_name}</field>
-#             </layoutItems>"""
-#         else:
-#             layout_items += f"""
-#             <layoutItems>
-#                 <behavior>Edit</behavior>
-#                 <field>{field_name}</field>
-#             </layoutItems>"""
-
-#     return f"""<?xml version="1.0" encoding="UTF-8"?>
-# <Layout xmlns="http://soap.sforce.com/2006/04/metadata">
-#     <layoutSections>
-#         <customLabel>false</customLabel>
-#         <detailHeading>true</detailHeading>
-#         <editHeading>true</editHeading>
-#         <label>Information</label>
-#         <layoutColumns>
-#             {layout_items}
-#         </layoutColumns>
-#         <style>TwoColumnsTopToBottom</style>
-#     </layoutSections>
-# </Layout>"""
-
 
 def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
     import xml.etree.ElementTree as ET
@@ -222,7 +171,6 @@ def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
         <style>TwoColumnsTopToBottom</style>
     </layoutSections>
 </Layout>"""
-
 
 
 

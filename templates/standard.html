@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Layout Merge Tester</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+
+  <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8 space-y-6">
+    <h1 class="text-3xl font-bold text-center text-blue-700">Salesforce Layout Merger</h1>
+    <p class="text-gray-600 text-center">Append custom fields into existing standard object layouts</p>
+
+    <!-- Object Selection -->
+    <div>
+      <label class="block text-sm font-semibold mb-1 text-gray-700">Standard Object</label>
+      <select id="objectName" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-blue-200 p-2">
+        <option value="Account">Account</option>
+        <option value="Contact">Contact</option>
+      </select>
+    </div>
+
+    <!-- Field API Name -->
+    <div>
+      <label class="block text-sm font-semibold mb-1 text-gray-700">Field API Name</label>
+      <input type="text" id="fieldAPIName" placeholder="e.g., Region__c" class="w-full border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-blue-200 p-2" />
+    </div>
+
+    <!-- Submit Button -->
+    <div class="flex justify-center">
+      <button onclick="appendField()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-200 shadow-md">
+        Append Field to Layout
+      </button>
+    </div>
+
+    <!-- Result -->
+    <div id="result" class="hidden mt-6">
+      <h2 class="text-lg font-semibold text-gray-800">Updated Layout XML</h2>
+      <pre id="layoutOutput" class="bg-gray-50 p-4 rounded-lg shadow-inner border text-sm overflow-x-auto whitespace-pre-wrap mt-2 max-h-96"></pre>
+    </div>
+  </div>
+
+  <script>
+    async function appendField() {
+      const objectName = document.getElementById("objectName").value;
+      const fieldAPIName = document.getElementById("fieldAPIName").value;
+
+      const response = await fetch("/append-field", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectName, fieldAPIName }),
+      });
+
+      const data = await response.json();
+      if (data.updatedLayoutXml) {
+        document.getElementById("layoutOutput").textContent = data.updatedLayoutXml;
+        document.getElementById("result").classList.remove("hidden");
+      } else {
+        alert(data.error || "Something went wrong.");
+      }
+    }
+  </script>
+
+</body>
+</html>

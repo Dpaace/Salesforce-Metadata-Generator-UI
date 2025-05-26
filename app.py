@@ -7,6 +7,10 @@ import uuid
 from flask import request, jsonify
 import requests
 
+from retrieve_standard_layout import retrieve_layout_metadata, check_retrieve_status, extract_layout_from_response
+import time
+
+
 PORT = 5000
 REDIRECT_URI = f'http://localhost:{PORT}/redirect.html'
 app = Flask(__name__)
@@ -60,6 +64,10 @@ def oauth_redirect():
 @app.route('/index')
 def index():
     return open('templates/index.html').read()
+  
+@app.route('/standard')
+def standard():
+    return open('templates/standard.html').read()
 
 @app.route('/success')
 def deploy_success():
@@ -176,6 +184,93 @@ def check_deploy_status():
         return response.text, response.status_code
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+      
+def append_field_to_layout(layout_xml: str, field_api_name: str) -> str:
+    new_section = f"""
+    <layoutSections>
+        <customLabel>true</customLabel>
+        <detailHeading>true</detailHeading>
+        <editHeading>true</editHeading>
+        <label>Custom Fields</label>
+        <layoutColumns>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>{field_api_name}</field>
+            </layoutItems>
+        </layoutColumns>
+        <layoutColumns/>
+        <style>TwoColumnsTopToBottom</style>
+    </layoutSections>"""
+    
+    idx = layout_xml.rfind("</layoutSections>")
+    if idx == -1:
+        raise ValueError("No layoutSections found")
+    
+    return layout_xml[:idx + len("</layoutSections>")] + new_section + layout_xml[idx + len("</layoutSections>"):]
+  
+def generate_object_file(object_name: str, field_api_name: str, label: str) -> str:
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>{field_api_name}</fullName>
+        <externalId>false</externalId>
+        <label>{label}</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+    </fields>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>"""
+
+def generate_package_xml(object_name: str, layout_name: str) -> str:
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>{object_name}</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>{layout_name}</members>
+        <name>Layout</name>
+    </types>
+    <version>63.0</version>
+</Package>"""
+
+
+
+
+@app.route('/append-field', methods=['POST'])
+def append_field():
+    # access_token = '00DdM00000B48zI!AQEAQP6GFVeamFnzVkHHyp4Ivcak8Nk8MfOI6ek5eWHb8R1elkKgJA5P4TS3L4Q1qR7JMtTaQ6P6ZDdgismJaY9TJHEVN3aj'  # Replace this
+    # instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'
+    data = request.get_json()
+    access_token = "00DdM00000B48zI!AQEAQP6GFVeamFnzVkHHyp4Ivcak8Nk8MfOI6ek5eWHb8R1elkKgJA5P4TS3L4Q1qR7JMtTaQ6P6ZDdgismJaY9TJHEVN3aj"
+    instance_url = "https://ssadminlearn123-dev-ed.develop.my.salesforce.com"
+    object_name = data['objectName']
+    field_api_name = data['fieldAPIName']
+    
+    layout_full_name = f"{object_name}-{object_name} Layout"
+
+    try:
+        retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
+        for _ in range(10):
+            xml_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+            layout_xml = extract_layout_from_response(xml_response)
+            if layout_xml:
+                break
+            time.sleep(2)
+        
+        if not layout_xml:
+            return jsonify({"error": "Layout not retrieved"}), 500
+        
+        updated_layout = append_field_to_layout(layout_xml, field_api_name)
+
+        return jsonify({"updatedLayoutXml": updated_layout})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+ 
 
 
 if __name__ == '__main__':
