@@ -96,10 +96,18 @@
             </div>
 
             <div>
+                <h2 class="text-lg font-semibold text-gray-800">👤 Admin Profile (FLS)</h2>
+                <pre id="profileOutput"
+                    class="bg-gray-50 p-4 rounded-lg border text-sm overflow-x-auto whitespace-pre-wrap max-h-96"></pre>
+            </div>
+            
+
+            <div>
                 <h2 class="text-lg font-semibold text-gray-800">📦 package.xml</h2>
                 <pre id="packageOutput"
                     class="bg-gray-50 p-4 rounded-lg border text-sm overflow-x-auto whitespace-pre-wrap max-h-96"></pre>
             </div>
+
         </div>
 
 
@@ -174,6 +182,7 @@
                 document.getElementById("layoutOutput").textContent = data.layoutXml;
                 document.getElementById("objectOutput").textContent = data.objectXml;
                 document.getElementById("packageOutput").textContent = data.packageXml;
+                document.getElementById("profileOutput").textContent = data.profileXml;
                 document.getElementById("result").classList.remove("hidden");
             } else {
                 alert(data.error || "Something went wrong.");
