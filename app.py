@@ -2,6 +2,7 @@ from flask import Flask, request, send_file, render_template_string
 import os
 import shutil
 from utils.generate_metadata import create_metadata_folder
+from utils.standard_generator import create_standard_metadata_folder
 import zipfile
 import uuid
 from flask import request, jsonify
@@ -9,7 +10,6 @@ import requests
 
 from retrieve_standard_layout import retrieve_layout_metadata, check_retrieve_status, extract_layout_from_response
 import time
-
 
 PORT = 5000
 REDIRECT_URI = f'http://localhost:{PORT}/redirect.html'
@@ -19,11 +19,9 @@ app = Flask(__name__)
 @app.route('/generate', methods=['POST'])
 def generate_metadata():
     # objects = request.get_json()
-
     # session_id = str(uuid.uuid4())
     # base_folder = f'metadata/{session_id}'
     # os.makedirs(base_folder, exist_ok=True)
-
     # create_metadata_folder(base_folder, objects)
     
     payload = request.get_json()
@@ -49,6 +47,40 @@ def generate_metadata():
     shutil.rmtree(base_folder)
 
     return send_file(zip_path, as_attachment=True)
+  
+  
+
+
+@app.route('/generate-standard-zip', methods=['POST'])
+def generate_standard_zip():
+    data = request.get_json()
+    objects = data.get('objects')
+    access_token = data.get('access_token')
+    instance_url = data.get('instance_url')
+
+    if not all([objects, access_token, instance_url]):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    session_id = str(uuid.uuid4())
+    base_folder = f'standardmetadata/{session_id}'
+    os.makedirs(base_folder, exist_ok=True)
+
+    try:
+        create_standard_metadata_folder(base_folder, objects, access_token, instance_url)
+    except Exception as e:
+        return jsonify({'error': f'Metadata generation failed: {str(e)}'}), 500
+
+    zip_path = f'standardmetadata_{session_id}.zip'
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(base_folder):
+            for file in files:
+                filepath = os.path.join(root, file)
+                arcname = os.path.relpath(filepath, base_folder)
+                zipf.write(filepath, arcname)
+
+    return send_file(zip_path, as_attachment=True)
+
+
 
 @app.route('/')
 def oauth():
@@ -185,28 +217,6 @@ def check_deploy_status():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
       
-# def append_field_to_layout(layout_xml: str, field_api_name: str) -> str:
-#     new_section = f"""
-#     <layoutSections>
-#         <customLabel>true</customLabel>
-#         <detailHeading>true</detailHeading>
-#         <editHeading>true</editHeading>
-#         <label>Custom Fields</label>
-#         <layoutColumns>
-#             <layoutItems>
-#                 <behavior>Edit</behavior>
-#                 <field>{field_api_name}</field>
-#             </layoutItems>
-#         </layoutColumns>
-#         <layoutColumns/>
-#         <style>TwoColumnsTopToBottom</style>
-#     </layoutSections>"""
-    
-#     idx = layout_xml.rfind("</layoutSections>")
-#     if idx == -1:
-#         raise ValueError("No layoutSections found")
-    
-#     return layout_xml[:idx + len("</layoutSections>")] + new_section + layout_xml[idx + len("</layoutSections>"):]
 
 def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str:
     import xml.etree.ElementTree as ET
@@ -244,7 +254,6 @@ def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str
     else:
         root.append(section)
 
-    # return ET.tostring(root, encoding='unicode')
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
 
 
@@ -267,20 +276,6 @@ def generate_object_file(object_name: str, field_api_name: str, label: str) -> s
     <sharingModel>ReadWrite</sharingModel>
 </CustomObject>"""
 
-
-# def generate_package_xml(object_name: str, layout_name: str) -> str:
-#     return f"""<?xml version="1.0" encoding="UTF-8"?>
-# <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-#     <types>
-#         <members>{object_name}</members>
-#         <name>CustomObject</name>
-#     </types>
-#     <types>
-#         <members>{layout_name}</members>
-#         <name>Layout</name>
-#     </types>
-#     <version>63.0</version>
-# </Package>"""
 
 def generate_package_xml(object_name: str, layout_name: str) -> str:
     return f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -323,7 +318,7 @@ def append_field():
     access_token = "00DdM00000B48zI!AQEAQFspPCue1qseO6EudPseGEWQKrXgHXrEURH5Czk5rlVtY0q1vXpWdvNVsdlS37Oj8jx77E7Q8_KgqK0JUzbyzvBhNcgG"
     instance_url = "https://ssadminlearn123-dev-ed.develop.my.salesforce.com"
     object_name = data['objectName']
-    fields = data['fields']  # List of {"apiName": ..., "label": ...}
+    fields = data['fields']
 
     layout_full_name = f"{object_name}-{object_name} Layout"
 
@@ -340,8 +335,6 @@ def append_field():
             return jsonify({"error": "Layout not retrieved"}), 500
 
         # Append all fields to layout
-        # for field in fields:
-        #     layout_xml = append_field_to_layout(layout_xml, field['apiName'])
         layout_xml = merge_fields_into_layout(layout_xml, [f["apiName"] for f in fields])
 
 
@@ -358,14 +351,6 @@ def append_field():
                 <length>255</length>
             </fields>""" for f in fields
         ])
-
-
-        # object_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-            # <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-            # {field_blocks}
-            #     <deploymentStatus>Deployed</deploymentStatus>
-            #     <sharingModel>ReadWrite</sharingModel>
-            # </CustomObject>"""
 
         object_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
             <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
