@@ -97,10 +97,14 @@ def oauth():
 def oauth_redirect():
     return open("templates/redirect.html").read()
 
+@app.route("/select")
+def select():
+    return open("templates/select.html").read()
 
-@app.route("/index")
+
+@app.route("/custom")
 def index():
-    return open("templates/index.html").read()
+    return open("templates/custom.html").read()
 
 
 @app.route("/standard")
