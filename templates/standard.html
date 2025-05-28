@@ -23,13 +23,6 @@
             </select>
         </div>
 
-        <!-- Field API Name -->
-        <!-- <div>
-            <label class="block text-sm font-semibold mb-1 text-gray-700">Field API Name</label>
-            <input type="text" id="fieldAPIName" placeholder="e.g., Region__c"
-                class="w-full border-gray-300 rounded-lg shadow-sm focus:ring focus:ring-blue-200 p-2" />
-        </div> -->
-
         <!-- Collapsible Custom Fields Section -->
         <div class="bg-white border rounded-lg shadow-md">
             <div class="flex items-center justify-between px-4 py-3 bg-gray-100 border-b">
@@ -44,19 +37,49 @@
                 <div class="fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative">
                     <button onclick="removeField(this)"
                         class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
-                    <h3 class="text-sm font-medium text-gray-600">Custom Field 1</h3>
+                    <h3 class="text-sm font-medium text-gray-600">Custom Field</h3>
+
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
                         <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded"
                             placeholder="e.g., Region" />
                     </div>
+
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
                         <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded"
                             placeholder="e.g., Region__c" />
                     </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Type</label>
+                        <select name="type" class="field-type w-full p-2 border border-gray-300 rounded"
+                            onchange="handleFieldTypeChange(this)">
+                            <option value="Text">Text</option>
+                            <option value="Date">Date</option>
+                            <option value="Number">Number</option>
+                            <option value="Checkbox">Checkbox</option>
+                            <option value="Picklist">Picklist</option>
+                        </select>
+                    </div>
+
+                    <div class="picklist-values hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Picklist Values (comma
+                            separated)</label>
+                        <input type="text" name="picklistValues" class="w-full p-2 border border-gray-300 rounded"
+                            placeholder="e.g., Option1, Option2, Option3" />
+                    </div>
+
+                    <!-- <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Required?</label>
+                        <select name="required" class="w-full p-2 border border-gray-300 rounded">
+                            <option value="false">Optional</option>
+                            <option value="true">Required</option>
+                        </select>
+                    </div> -->
                 </div>
             </div>
+
 
             <div class="px-4 pb-4">
                 <button type="button" onclick="addField()" class="text-sm text-blue-600 hover:underline mt-2">
@@ -74,13 +97,38 @@
                 class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-200 shadow-md">
                 Append Field to Layout
             </button>
+            <button onclick="downloadZip()"
+                class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-200 shadow-md mt-4">
+                📦 Generate Metadata ZIP
+            </button>
         </div>
 
-        <!-- Result -->
-        <!-- <div id="result" class="hidden mt-6">
-      <h2 class="text-lg font-semibold text-gray-800">Updated Layout XML</h2>
-      <pre id="layoutOutput" class="bg-gray-50 p-4 rounded-lg shadow-inner border text-sm overflow-x-auto whitespace-pre-wrap mt-2 max-h-96"></pre>
-    </div> -->
+        <div id="base64Section" class="hidden mt-6 space-y-2">
+            <h2 class="text-lg font-semibold text-gray-800">📦 Base64 Encoded metadata.zip</h2>
+            <textarea id="base64Text" class="w-full h-64 p-4 border rounded bg-gray-50 text-sm" readonly></textarea>
+            <div class="flex justify-between items-center mt-3">
+                <button onclick="copyBase64()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+                    📋 Copy Base64
+                </button>
+                <button onclick="deployToSalesforce()"
+                    class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm">
+                    🚀 Deploy to Salesforce
+                </button>
+            </div>
+        </div>
+
+
+        <script>
+            function copyBase64() {
+                const text = document.getElementById("base64Text").value;
+                navigator.clipboard.writeText(text)
+                    .then(() => alert("Base64 copied to clipboard!"))
+                    .catch(err => alert("Failed to copy."));
+            }
+        </script>
+
+
 
         <div id="result" class="hidden mt-6 space-y-6">
             <div>
@@ -96,10 +144,18 @@
             </div>
 
             <div>
+                <h2 class="text-lg font-semibold text-gray-800">👤 Admin Profile (FLS)</h2>
+                <pre id="profileOutput"
+                    class="bg-gray-50 p-4 rounded-lg border text-sm overflow-x-auto whitespace-pre-wrap max-h-96"></pre>
+            </div>
+
+
+            <div>
                 <h2 class="text-lg font-semibold text-gray-800">📦 package.xml</h2>
                 <pre id="packageOutput"
                     class="bg-gray-50 p-4 rounded-lg border text-sm overflow-x-auto whitespace-pre-wrap max-h-96"></pre>
             </div>
+
         </div>
 
 
@@ -107,10 +163,62 @@
 
 
     <script>
-        let fieldCount = 1;
+        //let fieldCount = 1;
         let isCollapsed = false;
 
         function addField() {
+
+            const container = document.getElementById("fieldsContainer");
+
+            const block = document.createElement("div");
+            block.className = "fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative";
+            block.innerHTML = `
+                    <button onclick="removeField(this)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
+                    <h3 class="text-sm font-medium text-gray-600">Custom Field</h3>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
+                        <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., Region" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
+                        <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., Region__c" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Type</label>
+                        <select name="type" class="field-type w-full p-2 border border-gray-300 rounded" onchange="handleFieldTypeChange(this)">
+                            <option value="Text">Text</option>
+                            <option value="Date">Date</option>
+                            <option value="Number">Number</option>
+                            <option value="Checkbox">Checkbox</option>
+                            <option value="Picklist">Picklist</option>
+                        </select>
+                    </div>
+
+                    <div class="picklist-values hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Picklist Values (comma separated)</label>
+                        <input type="text" name="picklistValues" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., Option1, Option2" />
+                    </div>
+                `;
+            container.appendChild(block);
+        }
+
+        function handleFieldTypeChange(selectElement) {
+            const block = selectElement.closest(".fieldBlock");
+            const picklistInput = block.querySelector(".picklist-values");
+
+            if (selectElement.value === "Picklist") {
+                picklistInput.classList.remove("hidden");
+            } else {
+                picklistInput.classList.add("hidden");
+            }
+        }
+
+
+
+        function addField_Old() {
             fieldCount++;
 
             const container = document.getElementById("fieldsContainer");
@@ -118,17 +226,17 @@
             const block = document.createElement("div");
             block.className = "fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative";
             block.innerHTML = `
-      <button onclick="removeField(this)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
-      <h3 class="text-sm font-medium text-gray-600">Custom Field ${fieldCount}</h3>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
-        <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., New Label" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
-        <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., NewLabel__c" />
-      </div>
-    `;
+                <button onclick="removeField(this)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
+                <h3 class="text-sm font-medium text-gray-600">Custom Field ${fieldCount}</h3>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
+                    <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., New Label" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
+                    <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., NewLabel__c" />
+                </div>
+                `;
             container.appendChild(block);
         }
 
@@ -152,13 +260,35 @@
         async function appendField() {
             const objectName = document.getElementById("objectName").value;
 
+            //const fields = [];
+            //const fieldBlocks = document.querySelectorAll(".fieldBlock");
+            //fieldBlocks.forEach(block => {
+            //    const apiName = block.querySelector("input[name='apiName']").value.trim();
+            //    const label = block.querySelector("input[name='label']").value.trim();
+            //    if (apiName && label) fields.push({ apiName, label });
+            //});
+
             const fields = [];
             const fieldBlocks = document.querySelectorAll(".fieldBlock");
             fieldBlocks.forEach(block => {
                 const apiName = block.querySelector("input[name='apiName']").value.trim();
                 const label = block.querySelector("input[name='label']").value.trim();
-                if (apiName && label) fields.push({ apiName, label });
+                const type = block.querySelector("select[name='type']").value;
+                const required = block.querySelector("select[name='required']").value === "true";
+                const picklistRaw = block.querySelector("input[name='picklistValues']");
+                const picklistValues = picklistRaw ? picklistRaw.value.split(',').map(v => v.trim()).filter(v => v) : [];
+
+                if (apiName && label) {
+                    fields.push({
+                        apiName,
+                        label,
+                        type,
+                        required,
+                        picklistValues
+                    });
+                }
             });
+
 
             const response = await fetch("/append-field", {
                 method: "POST",
@@ -174,58 +304,165 @@
                 document.getElementById("layoutOutput").textContent = data.layoutXml;
                 document.getElementById("objectOutput").textContent = data.objectXml;
                 document.getElementById("packageOutput").textContent = data.packageXml;
+                document.getElementById("profileOutput").textContent = data.profileXml;
                 document.getElementById("result").classList.remove("hidden");
             } else {
                 alert(data.error || "Something went wrong.");
             }
         }
-
     </script>
 
     <!-- <script>
-        async function appendField() {
+        async function downloadZip() {
             const objectName = document.getElementById("objectName").value;
-            const fieldAPIName = document.getElementById("fieldAPIName").value;
 
-            const response = await fetch("/append-field", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ objectName, fieldAPIName }),
+            const fields = [];
+            const fieldBlocks = document.querySelectorAll(".fieldBlock");
+            fieldBlocks.forEach(block => {
+                const apiName = block.querySelector("input[name='apiName']").value.trim();
+                const label = block.querySelector("input[name='label']").value.trim();
+                if (apiName && label) fields.push({ apiName, label });
             });
 
-            const data = await response.json();
+            if (fields.length === 0) {
+                alert("Please add at least one field before generating metadata.");
+                return;
+            }
 
-            if (data.layoutXml) {
-                document.getElementById("layoutOutput").textContent = data.layoutXml;
-                document.getElementById("objectOutput").textContent = data.objectXml;
-                document.getElementById("packageOutput").textContent = data.packageXml;
-                document.getElementById("result").classList.remove("hidden");
-            } else {
-                alert(data.error || "Something went wrong.");
+            const payload = {
+                objects: [{
+                    objectApiName: objectName,
+                    fields: fields
+                }],
+                access_token: localStorage.getItem("sf_access_token"),
+                instance_url: localStorage.getItem("sf_instance_url")
+            };
+
+            try {
+                const response = await fetch('/generate-standard-zip', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Failed to generate metadata.zip");
+
+                const blob = await response.blob();
+                const reader = new FileReader();
+
+                reader.onloadend = function () {
+                    const base64data = reader.result.split(',')[1];
+                    document.getElementById("base64Text").value = base64data;
+                    document.getElementById("base64Section").classList.remove("hidden");
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                };
+
+                reader.readAsDataURL(blob);
+            } catch (err) {
+                console.error(err);
+                alert("Failed to generate metadata. See console.");
             }
         }
 
     </script> -->
-    <!-- <script>
-    async function appendField() {
-      const objectName = document.getElementById("objectName").value;
-      const fieldAPIName = document.getElementById("fieldAPIName").value;
+    <script>
+        async function downloadZip() {
+            const objectName = document.getElementById("objectName").value;
 
-      const response = await fetch("/append-field", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objectName, fieldAPIName }),
-      });
+            const fields = [];
+            const fieldBlocks = document.querySelectorAll(".fieldBlock");
 
-      const data = await response.json();
-      if (data.updatedLayoutXml) {
-        document.getElementById("layoutOutput").textContent = data.updatedLayoutXml;
-        document.getElementById("result").classList.remove("hidden");
-      } else {
-        alert(data.error || "Something went wrong.");
-      }
-    }
-  </script> -->
+            fieldBlocks.forEach(block => {
+                const apiName = block.querySelector("input[name='apiName']").value.trim();
+                const label = block.querySelector("input[name='label']").value.trim();
+                const type = block.querySelector("select[name='type']").value;
+                const required = block.querySelector("select[name='required']").value === "true";
+                let picklistValues = "";
+
+                // Only get picklist values if field type is Picklist
+                if (type === "Picklist") {
+                    const picklistInput = block.querySelector("input[name='picklistValues']");
+                    if (picklistInput) {
+                        picklistValues = picklistInput.value.trim();
+                    }
+                }
+
+                if (apiName && label && type) {
+                    const field = { apiName, label, type, required };
+                    if (type === "Picklist") {
+                        field.picklistValues = picklistValues;
+                    }
+                    fields.push(field);
+                }
+            });
+
+            if (fields.length === 0) {
+                alert("Please add at least one field before generating metadata.");
+                return;
+            }
+
+            const payload = {
+                objects: [{
+                    objectApiName: objectName,
+                    fields: fields
+                }],
+                access_token: localStorage.getItem("sf_access_token"),
+                instance_url: localStorage.getItem("sf_instance_url")
+            };
+
+            try {
+                const response = await fetch('/generate-standard-zip', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Failed to generate metadata.zip");
+
+                const blob = await response.blob();
+                const reader = new FileReader();
+
+                reader.onloadend = function () {
+                    const base64data = reader.result.split(',')[1];
+                    document.getElementById("base64Text").value = base64data;
+                    document.getElementById("base64Section").classList.remove("hidden");
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                };
+
+                reader.readAsDataURL(blob);
+            } catch (err) {
+                console.error(err);
+                alert("Failed to generate metadata. See console.");
+            }
+        }
+    </script>
+
+
+
+    <script>
+        async function deployToSalesforce() {
+            const accessToken = localStorage.getItem('sf_access_token');
+            const instanceUrl = localStorage.getItem('sf_instance_url');
+            const zipFile = document.getElementById('base64Text').value.trim();
+
+            if (!accessToken || !instanceUrl || !zipFile) {
+                alert('Missing access token, instance URL, or metadata.');
+                return;
+            }
+
+            localStorage.setItem('sf_zip_file', zipFile);
+            localStorage.setItem('sf_deploy_in_progress', 'true');
+
+            // Optional: show a loader or redirect to status page
+            window.location.href = '/deploying';
+        }
+
+        window.onload = function () {
+            const storedToken = localStorage.getItem('sf_access_token');
+            const storedInstanceUrl = localStorage.getItem('sf_instance_url');
+        };
+    </script>
+
 
 </body>
 
