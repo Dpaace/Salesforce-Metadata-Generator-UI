@@ -67,13 +67,15 @@ def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str
 # </CustomObject>"""
 
 
+
+# <required>{str(field.get('required', False)).lower()}</required>
 def generate_object_file(object_name: str, fields: list[dict]) -> str:
     def build_field_block(field: dict) -> str:
         base = f"""    <fields>
         <fullName>{field['apiName']}</fullName>
         <externalId>false</externalId>
         <label>{field['label']}</label>
-        <required>{str(field.get('required', False)).lower()}</required>
+        <required>false</required>
         <trackHistory>false</trackHistory>
         <trackTrending>false</trackTrending>"""
 
@@ -82,37 +84,67 @@ def generate_object_file(object_name: str, fields: list[dict]) -> str:
         if field_type == "Text":
             base += f"""
         <type>Text</type>
-        <length>255</length>"""
+        <length>255</length>
+        </fields>"""
         elif field_type == "Number":
             base += f"""
         <type>Number</type>
         <precision>18</precision>
-        <scale>2</scale>"""
+        <scale>2</scale>
+        </fields>"""
         elif field_type == "Date":
             base += f"""
         <type>Date</type>"""
         elif field_type == "Checkbox":
             base += f"""
         <type>Checkbox</type>
-        <defaultValue>false</defaultValue>"""
+        <defaultValue>false</defaultValue>
+        </fields>"""
+        # elif field_type == "Picklist":
+        #     picklist_vals = field.get("picklistValues", "")
+        #     picklist_entries = ""
+        #     for val in [v.strip() for v in picklist_vals.split(",") if v.strip()]:
+        #         picklist_entries += f"""
+        # <valueSet>
+        #     <valueSetDefinition>
+        #         <value>
+        #             <fullName>{val}</fullName>
+        #             <default>false</default>
+        #         </value>
+        #     </valueSetDefinition>
+        #     <restricted>true</restricted>
+        # </valueSet>"""
+        #     base += f"""
+        # <type>Picklist</type>{picklist_entries}"""
+
+        # base += "\n    </fields>"
         elif field_type == "Picklist":
             picklist_vals = field.get("picklistValues", "")
+            picklist_items = []
+
+            # Support both string and list inputs
+            if isinstance(picklist_vals, str):
+                picklist_items = [v.strip() for v in picklist_vals.split(",") if v.strip()]
+            elif isinstance(picklist_vals, list):
+                picklist_items = [v.strip() for v in picklist_vals if isinstance(v, str) and v.strip()]
+
             picklist_entries = ""
-            for val in [v.strip() for v in picklist_vals.split(",") if v.strip()]:
+            for val in picklist_items:
                 picklist_entries += f"""
-        <valueSet>
-            <valueSetDefinition>
                 <value>
                     <fullName>{val}</fullName>
                     <default>false</default>
-                </value>
-            </valueSetDefinition>
-            <restricted>true</restricted>
-        </valueSet>"""
-            base += f"""
-        <type>Picklist</type>{picklist_entries}"""
+                </value>"""
 
-        base += "\n    </fields>"
+            base += f"""
+                <type>Picklist</type>
+                <valueSet>
+                    <valueSetDefinition>
+                        {picklist_entries}
+                    </valueSetDefinition>
+                    <restricted>true</restricted>
+                </valueSet>
+                </fields>"""
         return base
 
     field_blocks = "\n".join([build_field_block(f) for f in fields])

@@ -265,19 +265,84 @@ def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str
     )
 
 
-def generate_object_file(object_name: str, field_api_name: str, label: str) -> str:
+# def generate_object_file(object_name: str, field_api_name: str, label: str) -> str:
+#     return f"""<?xml version="1.0" encoding="UTF-8"?>
+# <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+#     <fields>
+#         <fullName>{field_api_name}</fullName>
+#         <externalId>false</externalId>
+#         <label>{label}</label>
+#         <required>false</required>
+#         <trackHistory>false</trackHistory>
+#         <trackTrending>false</trackTrending>
+#         <type>Text</type>
+#         <length>255</length>
+#     </fields>
+#     <deploymentStatus>Deployed</deploymentStatus>
+#     <sharingModel>ReadWrite</sharingModel>
+# </CustomObject>"""
+
+def generate_object_file(object_name: str, fields: list[dict]) -> str:
+    def build_field_block(field: dict) -> str:
+        base = f"""    <fields>
+        <fullName>{field['apiName']}</fullName>
+        <externalId>false</externalId>
+        <label>{field['label']}</label>
+        <required>{str(field.get('required', False)).lower()}</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>"""
+
+        field_type = field.get("type", "Text")
+
+        if field_type == "Text":
+            base += f"""
+        <type>Text</type>
+        <length>255</length>"""
+        elif field_type == "Number":
+            base += f"""
+        <type>Number</type>
+        <precision>18</precision>
+        <scale>2</scale>"""
+        elif field_type == "Date":
+            base += f"""
+        <type>Date</type>"""
+        elif field_type == "Checkbox":
+            base += f"""
+        <type>Checkbox</type>
+        <defaultValue>false</defaultValue>"""
+        elif field_type == "Picklist":
+            picklist_vals = field.get("picklistValues", "")
+            picklist_items = []
+
+            # Support both string and list inputs
+            if isinstance(picklist_vals, str):
+                picklist_items = [v.strip() for v in picklist_vals.split(",") if v.strip()]
+            elif isinstance(picklist_vals, list):
+                picklist_items = [v.strip() for v in picklist_vals if isinstance(v, str) and v.strip()]
+
+            picklist_entries = ""
+            for val in picklist_items:
+                picklist_entries += f"""
+                <value>
+                    <fullName>{val}</fullName>
+                    <default>false</default>
+                </value>"""
+
+            base += f"""
+                <type>Picklist</type>
+                <valueSet>
+                    <valueSetDefinition>
+                        {picklist_entries}
+                    </valueSetDefinition>
+                    <restricted>true</restricted>
+                </valueSet>"""
+        return base
+
+    field_blocks = "\n".join([build_field_block(f) for f in fields])
+
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fields>
-        <fullName>{field_api_name}</fullName>
-        <externalId>false</externalId>
-        <label>{label}</label>
-        <required>false</required>
-        <trackHistory>false</trackHistory>
-        <trackTrending>false</trackTrending>
-        <type>Text</type>
-        <length>255</length>
-    </fields>
+{field_blocks}
     <deploymentStatus>Deployed</deploymentStatus>
     <sharingModel>ReadWrite</sharingModel>
 </CustomObject>"""
@@ -352,20 +417,7 @@ def append_field():
         layout_xml = merge_fields_into_layout(
             layout_xml, [f["apiName"] for f in fields]
         )
-
-        # Build combined object XML
-        # field_blocks = "\n".join([
-        #     f"""    <fields>
-        #         <fullName>{f['apiName']}</fullName>
-        #         <externalId>false</externalId>
-        #         <label>{f['label']}</label>
-        #         <required>false</required>
-        #         <trackHistory>false</trackHistory>
-        #         <trackTrending>false</trackTrending>
-        #         <type>Text</type>
-        #         <length>255</length>
-        #     </fields>""" for f in fields
-        # ])
+        
         field_blocks = ""
 
         for f in fields:
@@ -402,22 +454,33 @@ def append_field():
                 <defaultValue>false</defaultValue>
             </fields>"""
             elif field_type == "Picklist":
-                picklist_values = f.get("picklistValues", "")
-                entries = ""
-                for val in [v.strip() for v in picklist_values.split(",") if v.strip()]:
-                    entries += f"""        <valueSet>
-                    <valueSetDefinition>
-                        <sorted>false</sorted>
-                        <value>
-                            <fullName>{val}</fullName>
-                            <default>false</default>
-                            <label>{val}</label>
-                        </value>
-                    </valueSetDefinition>
-                </valueSet>\n"""
-                xml += f"""        <type>Picklist</type>
-        {entries}    </fields>"""
+              picklist_values = f.get("picklistValues", [])
+              
+              # Ensure it's a list (handle if accidentally passed as comma string)
+              if isinstance(picklist_values, str):
+                  values = [v.strip() for v in picklist_values.split(",") if v.strip()]
+              elif isinstance(picklist_values, list):
+                  values = [v.strip() for v in picklist_values if isinstance(v, str) and v.strip()]
+              else:
+                  values = []
 
+              entries = ""
+              for val in values:
+                  entries += f"""            <value>
+                          <fullName>{val}</fullName>
+                          <default>false</default>
+                          <label>{val}</label>
+                      </value>\n"""
+
+              xml += f"""        <type>Picklist</type>
+                      <valueSet>
+                          <valueSetDefinition>
+          {entries.strip()}
+                          </valueSetDefinition>
+                          <restricted>true</restricted>
+                      </valueSet>
+                  </fields>"""
+                  
             field_blocks += xml + "\n"
 
         object_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
