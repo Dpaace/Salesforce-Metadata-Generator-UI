@@ -8,36 +8,40 @@ import uuid
 from flask import request, jsonify
 import requests
 
-from retrieve_standard_layout import retrieve_layout_metadata, check_retrieve_status, extract_layout_from_response
+from retrieve_standard_layout import (
+    retrieve_layout_metadata,
+    check_retrieve_status,
+    extract_layout_from_response,
+)
 import time
 
 PORT = 5000
-REDIRECT_URI = f'http://localhost:{PORT}/redirect.html'
+REDIRECT_URI = f"http://localhost:{PORT}/redirect.html"
 app = Flask(__name__)
 
 
-@app.route('/generate', methods=['POST'])
+@app.route("/generate", methods=["POST"])
 def generate_metadata():
     # objects = request.get_json()
     # session_id = str(uuid.uuid4())
     # base_folder = f'metadata/{session_id}'
     # os.makedirs(base_folder, exist_ok=True)
     # create_metadata_folder(base_folder, objects)
-    
+
     payload = request.get_json()
-    objects = payload.get('objects')
-    access_token = payload.get('access_token')
-    instance_url = payload.get('instance_url')
+    objects = payload.get("objects")
+    access_token = payload.get("access_token")
+    instance_url = payload.get("instance_url")
 
     session_id = str(uuid.uuid4())
-    base_folder = f'metadata/{session_id}'
+    base_folder = f"metadata/{session_id}"
     os.makedirs(base_folder, exist_ok=True)
 
     # Pass tokens to create_metadata_folder
     create_metadata_folder(base_folder, objects, access_token, instance_url)
 
-    zip_path = f'{base_folder}.zip'
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    zip_path = f"{base_folder}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(base_folder):
             for file in files:
                 filepath = os.path.join(root, file)
@@ -47,31 +51,31 @@ def generate_metadata():
     shutil.rmtree(base_folder)
 
     return send_file(zip_path, as_attachment=True)
-  
-  
 
 
-@app.route('/generate-standard-zip', methods=['POST'])
+@app.route("/generate-standard-zip", methods=["POST"])
 def generate_standard_zip():
     data = request.get_json()
-    objects = data.get('objects')
-    access_token = data.get('access_token')
-    instance_url = data.get('instance_url')
+    objects = data.get("objects")
+    access_token = data.get("access_token")
+    instance_url = data.get("instance_url")
 
     if not all([objects, access_token, instance_url]):
-        return jsonify({'error': 'Missing required fields'}), 400
+        return jsonify({"error": "Missing required fields"}), 400
 
     session_id = str(uuid.uuid4())
-    base_folder = f'standardmetadata/{session_id}'
+    base_folder = f"standardmetadata/{session_id}"
     os.makedirs(base_folder, exist_ok=True)
 
     try:
-        create_standard_metadata_folder(base_folder, objects, access_token, instance_url)
+        create_standard_metadata_folder(
+            base_folder, objects, access_token, instance_url
+        )
     except Exception as e:
-        return jsonify({'error': f'Metadata generation failed: {str(e)}'}), 500
+        return jsonify({"error": f"Metadata generation failed: {str(e)}"}), 500
 
-    zip_path = f'standardmetadata_{session_id}.zip'
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    zip_path = f"standardmetadata_{session_id}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(base_folder):
             for file in files:
                 filepath = os.path.join(root, file)
@@ -81,68 +85,73 @@ def generate_standard_zip():
     return send_file(zip_path, as_attachment=True)
 
 
-
-@app.route('/')
+@app.route("/")
 def oauth():
-    with open('templates/oauth.html') as f:
+    with open("templates/oauth.html") as f:
         html = f.read()
     # Inject the redirect_uri directly into the template
     return render_template_string(html, redirect_uri=REDIRECT_URI)
 
-@app.route('/redirect.html')
+
+@app.route("/redirect.html")
 def oauth_redirect():
-    return open('templates/redirect.html').read()
+    return open("templates/redirect.html").read()
 
-@app.route('/index')
+
+@app.route("/index")
 def index():
-    return open('templates/index.html').read()
-  
-@app.route('/standard')
-def standard():
-    return open('templates/standard.html').read()
+    return open("templates/index.html").read()
 
-@app.route('/success')
+
+@app.route("/standard")
+def standard():
+    return open("templates/standard.html").read()
+
+
+@app.route("/success")
 def deploy_success():
     return "<h1 style='text-align:center;margin-top:100px;'>🎉 Congrats! Now you can register data.</h1>"
 
-@app.route('/deploying')
-def deploying_screen():
-    return open('templates/deploying.html').read()
 
-@app.route('/exchange-token', methods=['POST'])
+@app.route("/deploying")
+def deploying_screen():
+    return open("templates/deploying.html").read()
+
+
+@app.route("/exchange-token", methods=["POST"])
 def exchange_token():
     data = request.json
-    client_id = data.get('client_id')
-    redirect_uri = data.get('redirect_uri')
-    code = data.get('code')
-    client_secret = ''  # Optional: fill if your app requires it
+    client_id = data.get("client_id")
+    redirect_uri = data.get("redirect_uri")
+    code = data.get("code")
+    client_secret = ""  # Optional: fill if your app requires it
 
     payload = {
-        'grant_type': 'authorization_code',
-        'client_id': client_id,
-        'redirect_uri': redirect_uri,
-        'code': code
+        "grant_type": "authorization_code",
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "code": code,
     }
 
     if client_secret:
-        payload['client_secret'] = client_secret
+        payload["client_secret"] = client_secret
 
-    response = requests.post('https://login.salesforce.com/services/oauth2/token', data=payload)
+    response = requests.post(
+        "https://login.salesforce.com/services/oauth2/token", data=payload
+    )
 
     return jsonify(response.json())
 
 
-
-
-@app.route('/deploy-to-salesforce', methods=['POST'])
+@app.route("/deploy-to-salesforce", methods=["POST"])
 def deploy_to_salesforce():
     data = request.json
-    access_token = data.get('access_token')
-    instance_url = data.get('instance_url')
-    zip_file = data.get('zip_file')
+    access_token = data.get("access_token")
+    instance_url = data.get("instance_url")
+    zip_file = data.get("zip_file")
 
     if not all([access_token, instance_url, zip_file]):
-        return jsonify({'error': 'Missing required fields'}), 400
+        return jsonify({"error": "Missing required fields"}), 400
 
     soap_envelope = f"""
     <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
@@ -168,25 +177,23 @@ def deploy_to_salesforce():
 
     try:
         soap_url = f"{instance_url}/services/Soap/m/63.0"
-        headers = {
-            "Content-Type": "text/xml",
-            "SOAPAction": "deploy"
-        }
+        headers = {"Content-Type": "text/xml", "SOAPAction": "deploy"}
 
         response = requests.post(soap_url, headers=headers, data=soap_envelope)
         return response.text, response.status_code
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/check-deploy-status', methods=['POST'])
+
+@app.route("/check-deploy-status", methods=["POST"])
 def check_deploy_status():
     data = request.json
-    access_token = data.get('access_token')
-    instance_url = data.get('instance_url')
-    deploy_id = data.get('deploy_id')
+    access_token = data.get("access_token")
+    instance_url = data.get("instance_url")
+    deploy_id = data.get("deploy_id")
 
     if not all([access_token, instance_url, deploy_id]):
-        return jsonify({'error': 'Missing required fields'}), 400
+        return jsonify({"error": "Missing required fields"}), 400
 
     soap_envelope = f"""
     <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
@@ -206,46 +213,45 @@ def check_deploy_status():
     </env:Envelope>
     """.strip()
 
-    headers = {
-        "Content-Type": "text/xml",
-        "SOAPAction": "checkDeployStatus"
-    }
+    headers = {"Content-Type": "text/xml", "SOAPAction": "checkDeployStatus"}
 
     try:
-        response = requests.post(f"{instance_url}/services/Soap/m/63.0", headers=headers, data=soap_envelope)
+        response = requests.post(
+            f"{instance_url}/services/Soap/m/63.0", headers=headers, data=soap_envelope
+        )
         return response.text, response.status_code
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-      
+        return jsonify({"error": str(e)}), 500
+
 
 def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str:
     import xml.etree.ElementTree as ET
 
-    ns = {'ns': 'http://soap.sforce.com/2006/04/metadata'}
-    ET.register_namespace('', ns['ns'])  # Register default namespace
+    ns = {"ns": "http://soap.sforce.com/2006/04/metadata"}
+    ET.register_namespace("", ns["ns"])  # Register default namespace
 
     root = ET.fromstring(layout_xml)
 
     # Create one new section with all fields
-    section = ET.Element('layoutSections')
-    ET.SubElement(section, 'customLabel').text = 'true'
-    ET.SubElement(section, 'detailHeading').text = 'true'
-    ET.SubElement(section, 'editHeading').text = 'true'
-    ET.SubElement(section, 'label').text = 'Custom Fields'
+    section = ET.Element("layoutSections")
+    ET.SubElement(section, "customLabel").text = "true"
+    ET.SubElement(section, "detailHeading").text = "true"
+    ET.SubElement(section, "editHeading").text = "true"
+    ET.SubElement(section, "label").text = "Custom Fields"
 
-    column1 = ET.SubElement(section, 'layoutColumns')
-    column2 = ET.SubElement(section, 'layoutColumns')  # Empty second column
+    column1 = ET.SubElement(section, "layoutColumns")
+    column2 = ET.SubElement(section, "layoutColumns")  # Empty second column
 
     for api_name in field_api_names:
-        layout_item = ET.Element('layoutItems')
-        ET.SubElement(layout_item, 'behavior').text = 'Edit'
-        ET.SubElement(layout_item, 'field').text = api_name
+        layout_item = ET.Element("layoutItems")
+        ET.SubElement(layout_item, "behavior").text = "Edit"
+        ET.SubElement(layout_item, "field").text = api_name
         column1.append(layout_item)
 
-    ET.SubElement(section, 'style').text = 'TwoColumnsTopToBottom'
+    ET.SubElement(section, "style").text = "TwoColumnsTopToBottom"
 
     # Find last layoutSections and insert after
-    layout_sections = root.findall('ns:layoutSections', ns)
+    layout_sections = root.findall("ns:layoutSections", ns)
     if layout_sections:
         last_section = layout_sections[-1]
         parent = root
@@ -254,11 +260,11 @@ def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str
     else:
         root.append(section)
 
-    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding='unicode')
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(
+        root, encoding="unicode"
+    )
 
 
-
-  
 def generate_object_file(object_name: str, field_api_name: str, label: str) -> str:
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -296,14 +302,19 @@ def generate_package_xml(object_name: str, layout_name: str) -> str:
 </Package>"""
 
 
-def generate_profile_xml(object_name: str, fields: list[dict], profile_name: str = "Admin") -> str:
-    permissions = "\n".join([
-        f"""    <fieldPermissions>
+def generate_profile_xml(
+    object_name: str, fields: list[dict], profile_name: str = "Admin"
+) -> str:
+    permissions = "\n".join(
+        [
+            f"""    <fieldPermissions>
         <field>{object_name}.{field['apiName']}</field>
         <readable>true</readable>
         <editable>true</editable>
-    </fieldPermissions>""" for field in fields
-    ])
+    </fieldPermissions>"""
+            for field in fields
+        ]
+    )
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Profile xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -311,21 +322,24 @@ def generate_profile_xml(object_name: str, fields: list[dict], profile_name: str
 </Profile>"""
 
 
-
-@app.route('/append-field', methods=['POST'])
+@app.route("/append-field", methods=["POST"])
 def append_field():
     data = request.get_json()
-    access_token = "00DdM00000B48zI!AQEAQFspPCue1qseO6EudPseGEWQKrXgHXrEURH5Czk5rlVtY0q1vXpWdvNVsdlS37Oj8jx77E7Q8_KgqK0JUzbyzvBhNcgG"
+    access_token = "00DdM00000B48zI!AQEAQP29dyQ7qNtx626f6O5IbCVHy9fzLiil2ZDfW.1XJ.tAeQCufoAMMHTIMu6nr9zLptl90lDiV_ObavqqyNQTcf42EDlq"
     instance_url = "https://ssadminlearn123-dev-ed.develop.my.salesforce.com"
-    object_name = data['objectName']
-    fields = data['fields']
+    object_name = data["objectName"]
+    fields = data["fields"]
 
     layout_full_name = f"{object_name}-{object_name} Layout"
 
     try:
-        retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
+        retrieve_id = retrieve_layout_metadata(
+            access_token, instance_url, layout_full_name
+        )
         for _ in range(10):
-            xml_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+            xml_response = check_retrieve_status(
+                access_token, instance_url, retrieve_id
+            )
             layout_xml = extract_layout_from_response(xml_response)
             if layout_xml:
                 break
@@ -335,22 +349,76 @@ def append_field():
             return jsonify({"error": "Layout not retrieved"}), 500
 
         # Append all fields to layout
-        layout_xml = merge_fields_into_layout(layout_xml, [f["apiName"] for f in fields])
-
+        layout_xml = merge_fields_into_layout(
+            layout_xml, [f["apiName"] for f in fields]
+        )
 
         # Build combined object XML
-        field_blocks = "\n".join([
-            f"""    <fields>
-                <fullName>{f['apiName']}</fullName>
-                <externalId>false</externalId>
-                <label>{f['label']}</label>
-                <required>false</required>
+        # field_blocks = "\n".join([
+        #     f"""    <fields>
+        #         <fullName>{f['apiName']}</fullName>
+        #         <externalId>false</externalId>
+        #         <label>{f['label']}</label>
+        #         <required>false</required>
+        #         <trackHistory>false</trackHistory>
+        #         <trackTrending>false</trackTrending>
+        #         <type>Text</type>
+        #         <length>255</length>
+        #     </fields>""" for f in fields
+        # ])
+        field_blocks = ""
+
+        for f in fields:
+            label = f["label"]
+            api_name = f["apiName"]
+            field_type = f.get("type", "Text")
+            required = "true" if f.get("required") else "false"
+
+            # Common field header
+            xml = f"""    <fields>
+                <fullName>{api_name}</fullName>
+                <label>{label}</label>
+                <required>{required}</required>
                 <trackHistory>false</trackHistory>
                 <trackTrending>false</trackTrending>
-                <type>Text</type>
+                <externalId>false</externalId>
+            """
+
+            # Field-type-specific attributes
+            if field_type == "Text":
+                xml += """        <type>Text</type>
                 <length>255</length>
-            </fields>""" for f in fields
-        ])
+            </fields>"""
+            elif field_type == "Date":
+                xml += """        <type>Date</type>
+            </fields>"""
+            elif field_type == "Number":
+                xml += """        <type>Number</type>
+                <precision>18</precision>
+                <scale>2</scale>
+            </fields>"""
+            elif field_type == "Checkbox":
+                xml += """        <type>Checkbox</type>
+                <defaultValue>false</defaultValue>
+            </fields>"""
+            elif field_type == "Picklist":
+                picklist_values = f.get("picklistValues", "")
+                entries = ""
+                for val in [v.strip() for v in picklist_values.split(",") if v.strip()]:
+                    entries += f"""        <valueSet>
+                    <valueSetDefinition>
+                        <sorted>false</sorted>
+                        <value>
+                            <fullName>{val}</fullName>
+                            <default>false</default>
+                            <label>{val}</label>
+                        </value>
+                    </valueSetDefinition>
+                </valueSet>\n"""
+                xml += f"""        <type>Picklist</type>
+        {entries}    </fields>"""
+
+            field_blocks += xml + "\n"
 
         object_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
             <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -358,22 +426,23 @@ def append_field():
                 <deploymentStatus>Deployed</deploymentStatus>
                 <sharingModel>ReadWrite</sharingModel>
             </CustomObject>"""
-        
+
         profile_xml = generate_profile_xml(object_name, fields)
 
         package_xml = generate_package_xml(object_name, layout_full_name)
-        
-        return jsonify({
-            "layoutXml": layout_xml,
-            "objectXml": object_xml,
-            "profileXml": profile_xml,
-            "packageXml": package_xml
-        })
+
+        return jsonify(
+            {
+                "layoutXml": layout_xml,
+                "objectXml": object_xml,
+                "profileXml": profile_xml,
+                "packageXml": package_xml,
+            }
+        )
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-
-if __name__ == '__main__':
-    app.run(debug=True, host='localhost', port=PORT)
+if __name__ == "__main__":
+    app.run(debug=True, host="localhost", port=PORT)

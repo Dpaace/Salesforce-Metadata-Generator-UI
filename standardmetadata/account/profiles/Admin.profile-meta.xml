@@ -10,4 +10,14 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
+    <fieldPermissions>
+        <field>Account.Test3__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Account.Test4__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
 </Profile>

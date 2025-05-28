@@ -32,8 +32,7 @@
                 </button>
             </div>
 
-            <div id="fieldsContainer" class="space-y-4 p-4">
-                <!-- Field Block Template -->
+            <!-- <div id="fieldsContainer" class="space-y-4 p-4">
                 <div class="fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative">
                     <button onclick="removeField(this)"
                         class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
@@ -49,7 +48,56 @@
                             placeholder="e.g., Region__c" />
                     </div>
                 </div>
+            </div> -->
+
+            <div id="fieldsContainer" class="space-y-4 p-4">
+                <!-- Field Block Template -->
+                <div class="fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative">
+                    <button onclick="removeField(this)"
+                        class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
+                    <h3 class="text-sm font-medium text-gray-600">Custom Field 1</h3>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
+                        <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded"
+                            placeholder="e.g., Region" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
+                        <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded"
+                            placeholder="e.g., Region__c" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Type</label>
+                        <select name="type" class="field-type w-full p-2 border border-gray-300 rounded"
+                            onchange="handleFieldTypeChange(this)">
+                            <option value="Text">Text</option>
+                            <option value="Date">Date</option>
+                            <option value="Number">Number</option>
+                            <option value="Checkbox">Checkbox</option>
+                            <option value="Picklist">Picklist</option>
+                        </select>
+                    </div>
+
+                    <div class="picklist-values hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Picklist Values (comma
+                            separated)</label>
+                        <input type="text" name="picklistValues" class="w-full p-2 border border-gray-300 rounded"
+                            placeholder="e.g., Option1, Option2, Option3" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Required?</label>
+                        <select name="required" class="w-full p-2 border border-gray-300 rounded">
+                            <option value="false">Optional</option>
+                            <option value="true">Required</option>
+                        </select>
+                    </div>
+                </div>
             </div>
+
 
             <div class="px-4 pb-4">
                 <button type="button" onclick="addField()" class="text-sm text-blue-600 hover:underline mt-2">
@@ -156,17 +204,78 @@
             const block = document.createElement("div");
             block.className = "fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative";
             block.innerHTML = `
-      <button onclick="removeField(this)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
-      <h3 class="text-sm font-medium text-gray-600">Custom Field ${fieldCount}</h3>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
-        <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., New Label" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
-        <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., NewLabel__c" />
-      </div>
-    `;
+                    <button onclick="removeField(this)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
+                    <h3 class="text-sm font-medium text-gray-600">Custom Field ${fieldCount}</h3>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
+                        <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., Region" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
+                        <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., Region__c" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Field Type</label>
+                        <select name="type" class="field-type w-full p-2 border border-gray-300 rounded" onchange="handleFieldTypeChange(this)">
+                            <option value="Text">Text</option>
+                            <option value="Date">Date</option>
+                            <option value="Number">Number</option>
+                            <option value="Checkbox">Checkbox</option>
+                            <option value="Picklist">Picklist</option>
+                        </select>
+                    </div>
+
+                    <div class="picklist-values hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Picklist Values (comma separated)</label>
+                        <input type="text" name="picklistValues" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., Option1, Option2" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Required?</label>
+                        <select name="required" class="w-full p-2 border border-gray-300 rounded">
+                            <option value="false">Optional</option>
+                            <option value="true">Required</option>
+                        </select>
+                    </div>
+                `;
+            container.appendChild(block);
+        }
+
+        function handleFieldTypeChange(selectElement) {
+            const block = selectElement.closest(".fieldBlock");
+            const picklistInput = block.querySelector(".picklist-values");
+
+            if (selectElement.value === "Picklist") {
+                picklistInput.classList.remove("hidden");
+            } else {
+                picklistInput.classList.add("hidden");
+            }
+        }
+
+
+
+        function addField_Old() {
+            fieldCount++;
+
+            const container = document.getElementById("fieldsContainer");
+
+            const block = document.createElement("div");
+            block.className = "fieldBlock bg-gray-50 border rounded-lg p-4 shadow-sm space-y-3 relative";
+            block.innerHTML = `
+                <button onclick="removeField(this)" class="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm">✖</button>
+                <h3 class="text-sm font-medium text-gray-600">Custom Field ${fieldCount}</h3>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
+                    <input type="text" name="label" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., New Label" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
+                    <input type="text" name="apiName" class="w-full p-2 border border-gray-300 rounded" placeholder="e.g., NewLabel__c" />
+                </div>
+                `;
             container.appendChild(block);
         }
 
@@ -190,13 +299,35 @@
         async function appendField() {
             const objectName = document.getElementById("objectName").value;
 
+            //const fields = [];
+            //const fieldBlocks = document.querySelectorAll(".fieldBlock");
+            //fieldBlocks.forEach(block => {
+            //    const apiName = block.querySelector("input[name='apiName']").value.trim();
+            //    const label = block.querySelector("input[name='label']").value.trim();
+            //    if (apiName && label) fields.push({ apiName, label });
+            //});
+
             const fields = [];
             const fieldBlocks = document.querySelectorAll(".fieldBlock");
             fieldBlocks.forEach(block => {
                 const apiName = block.querySelector("input[name='apiName']").value.trim();
                 const label = block.querySelector("input[name='label']").value.trim();
-                if (apiName && label) fields.push({ apiName, label });
+                const type = block.querySelector("select[name='type']").value;
+                const required = block.querySelector("select[name='required']").value === "true";
+                const picklistRaw = block.querySelector("input[name='picklistValues']");
+                const picklistValues = picklistRaw ? picklistRaw.value.split(',').map(v => v.trim()).filter(v => v) : [];
+
+                if (apiName && label) {
+                    fields.push({
+                        apiName,
+                        label,
+                        type,
+                        required,
+                        picklistValues
+                    });
+                }
             });
+
 
             const response = await fetch("/append-field", {
                 method: "POST",
@@ -220,7 +351,7 @@
         }
     </script>
 
-    <script>
+    <!-- <script>
         async function downloadZip() {
             const objectName = document.getElementById("objectName").value;
 
@@ -272,7 +403,80 @@
             }
         }
 
+    </script> -->
+    <script>
+        async function downloadZip() {
+            const objectName = document.getElementById("objectName").value;
+
+            const fields = [];
+            const fieldBlocks = document.querySelectorAll(".fieldBlock");
+
+            fieldBlocks.forEach(block => {
+                const apiName = block.querySelector("input[name='apiName']").value.trim();
+                const label = block.querySelector("input[name='label']").value.trim();
+                const type = block.querySelector("select[name='type']").value;
+                const required = block.querySelector("select[name='required']").value === "true";
+                let picklistValues = "";
+
+                // Only get picklist values if field type is Picklist
+                if (type === "Picklist") {
+                    const picklistInput = block.querySelector("input[name='picklistValues']");
+                    if (picklistInput) {
+                        picklistValues = picklistInput.value.trim();
+                    }
+                }
+
+                if (apiName && label && type) {
+                    const field = { apiName, label, type, required };
+                    if (type === "Picklist") {
+                        field.picklistValues = picklistValues;
+                    }
+                    fields.push(field);
+                }
+            });
+
+            if (fields.length === 0) {
+                alert("Please add at least one field before generating metadata.");
+                return;
+            }
+
+            const payload = {
+                objects: [{
+                    objectApiName: objectName,
+                    fields: fields
+                }],
+                access_token: localStorage.getItem("sf_access_token"),
+                instance_url: localStorage.getItem("sf_instance_url")
+            };
+
+            try {
+                const response = await fetch('/generate-standard-zip', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Failed to generate metadata.zip");
+
+                const blob = await response.blob();
+                const reader = new FileReader();
+
+                reader.onloadend = function () {
+                    const base64data = reader.result.split(',')[1];
+                    document.getElementById("base64Text").value = base64data;
+                    document.getElementById("base64Section").classList.remove("hidden");
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                };
+
+                reader.readAsDataURL(blob);
+            } catch (err) {
+                console.error(err);
+                alert("Failed to generate metadata. See console.");
+            }
+        }
     </script>
+
+
 
     <script>
         async function deployToSalesforce() {

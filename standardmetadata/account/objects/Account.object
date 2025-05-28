@@ -17,8 +17,28 @@
         <required>false</required>
         <trackHistory>false</trackHistory>
         <trackTrending>false</trackTrending>
-        <type>Text</type>
-        <length>255</length>
+        <type>Date</type>
+    </fields>
+    <fields>
+        <fullName>Test3__c</fullName>
+        <externalId>false</externalId>
+        <label>Test3</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <precision>18</precision>
+        <scale>2</scale>
+    </fields>
+    <fields>
+        <fullName>Test4__c</fullName>
+        <externalId>false</externalId>
+        <label>Test4</label>
+        <required>false</required>
+        <trackHistory>false</trackHistory>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+        <defaultValue>false</defaultValue>
     </fields>
     <deploymentStatus>Deployed</deploymentStatus>
     <sharingModel>ReadWrite</sharingModel>
