@@ -1,0 +1,6 @@
+Model_No__c,Position__c,Type__c,OwnerId
+M-1011,Top-Center,Internal,005dM0000071L9dQAE
+M-1012,Bottom-Right,External,005dM0000071L9dQAE
+M-1013,Front-Center,Auxiliary,005dM0000071L9dQAE
+M-1014,Rear-Center,Spare,005dM0000071L9dQAE
+M-1015,Side-Left,Internal,005dM0000071L9dQAE

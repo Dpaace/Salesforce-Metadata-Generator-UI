@@ -97,6 +97,7 @@ def oauth():
 def oauth_redirect():
     return open("templates/redirect.html").read()
 
+
 @app.route("/select")
 def select():
     return open("templates/select.html").read()
@@ -120,6 +121,36 @@ def deploy_success():
 @app.route("/deploying")
 def deploying_screen():
     return open("templates/deploying.html").read()
+
+
+@app.route("/upload")
+def upload_page():
+    return open("templates/upload.html").read()
+
+
+@app.route("/upload-csv", methods=["POST"])
+def upload_csv_batch():
+    data = request.get_json()
+    access_token = data.get("access_token")
+    instance_url = data.get("instance_url")
+    object_name = data.get("object_name")
+    records = data.get("records", [])
+
+    if not all([access_token, instance_url, object_name, records]):
+        return "Missing data", 400
+
+    url = f"{instance_url}/services/data/v63.0/composite/tree/{object_name}/"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, headers=headers, json={"records": records})
+
+    if response.status_code in [200, 201] and not response.json().get("hasErrors"):
+        return "Success"
+    else:
+        return response.text, 500
 
 
 @app.route("/exchange-token", methods=["POST"])
@@ -286,6 +317,7 @@ def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str
 #     <sharingModel>ReadWrite</sharingModel>
 # </CustomObject>"""
 
+
 def generate_object_file(object_name: str, fields: list[dict]) -> str:
     def build_field_block(field: dict) -> str:
         base = f"""    <fields>
@@ -320,9 +352,13 @@ def generate_object_file(object_name: str, fields: list[dict]) -> str:
 
             # Support both string and list inputs
             if isinstance(picklist_vals, str):
-                picklist_items = [v.strip() for v in picklist_vals.split(",") if v.strip()]
+                picklist_items = [
+                    v.strip() for v in picklist_vals.split(",") if v.strip()
+                ]
             elif isinstance(picklist_vals, list):
-                picklist_items = [v.strip() for v in picklist_vals if isinstance(v, str) and v.strip()]
+                picklist_items = [
+                    v.strip() for v in picklist_vals if isinstance(v, str) and v.strip()
+                ]
 
             picklist_entries = ""
             for val in picklist_items:
@@ -421,7 +457,7 @@ def append_field():
         layout_xml = merge_fields_into_layout(
             layout_xml, [f["apiName"] for f in fields]
         )
-        
+
         field_blocks = ""
 
         for f in fields:
@@ -458,25 +494,31 @@ def append_field():
                 <defaultValue>false</defaultValue>
             </fields>"""
             elif field_type == "Picklist":
-              picklist_values = f.get("picklistValues", [])
-              
-              # Ensure it's a list (handle if accidentally passed as comma string)
-              if isinstance(picklist_values, str):
-                  values = [v.strip() for v in picklist_values.split(",") if v.strip()]
-              elif isinstance(picklist_values, list):
-                  values = [v.strip() for v in picklist_values if isinstance(v, str) and v.strip()]
-              else:
-                  values = []
+                picklist_values = f.get("picklistValues", [])
 
-              entries = ""
-              for val in values:
-                  entries += f"""            <value>
+                # Ensure it's a list (handle if accidentally passed as comma string)
+                if isinstance(picklist_values, str):
+                    values = [
+                        v.strip() for v in picklist_values.split(",") if v.strip()
+                    ]
+                elif isinstance(picklist_values, list):
+                    values = [
+                        v.strip()
+                        for v in picklist_values
+                        if isinstance(v, str) and v.strip()
+                    ]
+                else:
+                    values = []
+
+                entries = ""
+                for val in values:
+                    entries += f"""            <value>
                           <fullName>{val}</fullName>
                           <default>false</default>
                           <label>{val}</label>
                       </value>\n"""
 
-              xml += f"""        <type>Picklist</type>
+                xml += f"""        <type>Picklist</type>
                       <valueSet>
                           <valueSetDefinition>
           {entries.strip()}
@@ -484,7 +526,7 @@ def append_field():
                           <restricted>true</restricted>
                       </valueSet>
                   </fields>"""
-                  
+
             field_blocks += xml + "\n"
 
         object_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
