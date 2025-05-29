@@ -2,118 +2,154 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>CSV Uploader for Salesforce</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <title>Multi-CSV Uploader for Salesforce</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
-    <div class="bg-white shadow-xl p-8 rounded-2xl w-full max-w-xl space-y-6">
-        <h1 class="text-2xl font-bold text-gray-800 text-center">📤 Upload CSV to Salesforce</h1>
+  <div class="bg-white shadow-xl p-8 rounded-2xl w-full max-w-2xl space-y-6">
+    <h1 class="text-2xl font-bold text-gray-800 text-center">📤 Upload Multiple CSVs to Salesforce</h1>
 
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Object</label>
-            <input id="objectName" type="text" placeholder="e.g., Mass_Upload__c"
-                class="w-full border border-gray-300 rounded-lg p-2" />
-        </div>
+    <form id="multiUploadForm" class="space-y-6">
+      <div id="uploadSections" class="space-y-6"></div>
 
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Select CSV File</label>
-            <input id="csvFile" type="file" accept=".csv" class="w-full border border-gray-300 rounded-lg p-2" />
-        </div>
-
-        <button onclick="uploadCsv()"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded w-full">
-            Upload to Salesforce
+      <div class="flex justify-between items-center">
+        <button type="button" onclick="addUploadSection()"
+          class="text-blue-600 text-sm hover:underline">➕ Add CSV for Object</button>
+        <button type="button" onclick="startMultiUpload()"
+          class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded">
+          🚀 Upload All
         </button>
+      </div>
+    </form>
 
-        <div id="status" class="text-sm mt-4 text-gray-700 whitespace-pre-wrap"></div>
+    <div id="globalStatus" class="mt-4 text-sm text-gray-700 whitespace-pre-wrap"></div>
+  </div>
 
-        <!-- Progress Bar -->
-        <div class="w-full bg-gray-200 rounded-full h-4">
-            <div id="uploadProgressBar" class="bg-green-500 h-4 rounded-full w-0 transition-all duration-300"></div>
+  <script>
+    let sectionCount = 0;
+
+    function addUploadSection() {
+      const container = document.getElementById("uploadSections");
+
+      const section = document.createElement("div");
+      section.className = "upload-block p-4 border rounded bg-gray-50 space-y-4 relative";
+      section.innerHTML = `
+        <div class="flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-gray-800">Upload Section ${sectionCount + 1}</h2>
+          <button onclick="this.closest('.upload-block').remove()" class="text-red-500 text-sm">✖ Remove</button>
         </div>
-        <p id="progressText" class="text-sm mt-2 text-gray-700 text-center">0%</p>
 
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Salesforce Object Name</label>
+          <input type="text" name="objectName" placeholder="e.g., Mass_Upload__c"
+            class="w-full border border-gray-300 rounded-lg p-2" />
+        </div>
 
-    </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">CSV File</label>
+          <input type="file" name="csvFile" accept=".csv" class="w-full border border-gray-300 rounded-lg p-2" />
+        </div>
 
-    <script>
-        async function uploadCsv() {
-            const objectName = document.getElementById("objectName").value.trim();
-            const fileInput = document.getElementById("csvFile");
-            const status = document.getElementById("status");
-            const progressBar = document.getElementById("uploadProgressBar");
-            const progressText = document.getElementById("progressText");
+        <div class="w-full bg-gray-200 rounded-full h-3">
+          <div class="progress-bar bg-green-500 h-3 rounded-full w-0 transition-all duration-300"></div>
+        </div>
+        <p class="progress-text text-sm text-gray-700 text-right">0%</p>
+        <div class="upload-status text-sm text-gray-700 whitespace-pre-wrap"></div>
+      `;
 
-            const token = localStorage.getItem("sf_access_token");
-            const instance = localStorage.getItem("sf_instance_url");
+      container.appendChild(section);
+      sectionCount++;
+    }
 
-            if (!token || !instance) {
-                alert("Missing Salesforce access token or instance URL.");
-                return;
-            }
+    async function startMultiUpload() {
+      const blocks = document.querySelectorAll(".upload-block");
+      const globalStatus = document.getElementById("globalStatus");
+      globalStatus.textContent = "⏳ Starting uploads...\n";
 
-            if (!objectName || !fileInput.files.length) {
-                alert("Please provide object name and CSV file.");
-                return;
-            }
+      const token = localStorage.getItem("sf_access_token");
+      const instance = localStorage.getItem("sf_instance_url");
 
-            // Read CSV content
-            const file = fileInput.files[0];
-            const text = await file.text();
-            const rows = text.trim().split("\n");
-            const headers = rows.shift().split(",");
-            const records = rows.map(row => {
-                const values = row.split(",");
-                const record = {};
-                headers.forEach((h, i) => record[h.trim()] = values[i]?.trim());
-                return record;
-            });
+      if (!token || !instance) {
+        alert("Missing Salesforce access token or instance URL.");
+        return;
+      }
 
-            const batchSize = 200;
-            const total = records.length;
-            let uploaded = 0;
+      for (let b = 0; b < blocks.length; b++) {
+        const block = blocks[b];
+        const objectName = block.querySelector("input[name='objectName']").value.trim();
+        const fileInput = block.querySelector("input[name='csvFile']");
+        const progressBar = block.querySelector(".progress-bar");
+        const progressText = block.querySelector(".progress-text");
+        const statusBox = block.querySelector(".upload-status");
 
-            status.textContent = "⏳ Uploading records...";
-
-            for (let i = 0; i < total; i += batchSize) {
-                const chunk = records.slice(i, i + batchSize);
-
-                const batch = chunk.map((record, idx) => ({
-                    attributes: { type: objectName, referenceId: `ref_${i + idx}` },
-                    ...record,
-                }));
-
-                const res = await fetch(`${window.origin}/upload-csv`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        object_name: objectName,
-                        access_token: token,
-                        instance_url: instance,
-                        records: batch,
-                    }),
-                });
-
-                if (!res.ok) {
-                    const errorText = await res.text();
-                    status.textContent = `❌ Error uploading batch starting at record ${i + 1}:\n${errorText}`;
-                    progressBar.style.width = `0%`;
-                    progressText.textContent = `Failed`;
-                    return;
-                }
-
-                uploaded += chunk.length;
-                const percent = Math.floor((uploaded / total) * 100);
-                progressBar.style.width = `${percent}%`;
-                progressText.textContent = `${percent}%`;
-            }
-
-            status.textContent = `✅ Successfully uploaded ${uploaded} records to ${objectName}.`;
+        if (!objectName || !fileInput.files.length) {
+          statusBox.textContent = "❌ Object name or file missing.";
+          continue;
         }
 
-    </script>
+        const file = fileInput.files[0];
+        const text = await file.text();
+        const rows = text.trim().split("\n");
+        const headers = rows.shift().split(",");
+        const records = rows.map(row => {
+          const values = row.split(",");
+          const record = {};
+          headers.forEach((h, i) => record[h.trim()] = values[i]?.trim());
+          return record;
+        });
+
+        const batchSize = 10;
+        const total = records.length;
+        let uploaded = 0;
+
+        statusBox.textContent = `⏳ Uploading ${total} records to ${objectName}...\n`;
+
+        for (let i = 0; i < total; i += batchSize) {
+          const chunk = records.slice(i, i + batchSize);
+          const batch = chunk.map((record, idx) => ({
+            attributes: { type: objectName, referenceId: `ref_${i + idx}` },
+            ...record
+          }));
+
+          const res = await fetch(`${window.origin}/upload-csv`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              object_name: objectName,
+              access_token: token,
+              instance_url: instance,
+              records: batch
+            })
+          });
+
+          if (!res.ok) {
+            const err = await res.text();
+            statusBox.textContent += `❌ Error uploading batch starting at ${i + 1}:\n${err}\n`;
+            progressBar.style.width = `0%`;
+            progressText.textContent = `Failed`;
+            break;
+          }
+
+          uploaded += chunk.length;
+          const percent = Math.floor((uploaded / total) * 100);
+          progressBar.style.width = `${percent}%`;
+          progressText.textContent = `${percent}%`;
+        }
+
+        if (uploaded === total) {
+          statusBox.textContent += `✅ Successfully uploaded ${uploaded} records.`;
+        }
+      }
+
+      globalStatus.textContent += "\n🎉 Upload complete.";
+    }
+
+    window.onload = () => {
+      addUploadSection(); // start with one block
+    };
+  </script>
 </body>
 
 </html>
