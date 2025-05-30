@@ -85,7 +85,7 @@ if __name__ == "__main__":
         batches = batch_records(all_records)
         print(f"Total records: {len(all_records)} → {len(batches)} batches of {MAX_BATCH_SIZE}")
 
-        for idx, batch in enumerate(tqdm(batches, desc="📤 Uploading Batches", unit="batch")):
+        for idx, batch in enumerate(tqdm(batches, desc="Uploading Batches", unit="batch")):
             upload_batch(batch, access_token, idx + 1)
 
     except Exception as e:

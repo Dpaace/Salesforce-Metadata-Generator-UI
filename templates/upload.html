@@ -3,29 +3,55 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Multi-CSV Uploader for Salesforce</title>
+  <title>Multi-CSV Uploader</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
-  <div class="bg-white shadow-xl p-8 rounded-2xl w-full max-w-2xl space-y-6">
-    <h1 class="text-2xl font-bold text-gray-800 text-center">📤 Upload Multiple CSVs to Salesforce</h1>
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <form id="multiUploadForm" class="space-y-6">
-      <div id="uploadSections" class="space-y-6"></div>
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md py-4 px-6 flex justify-between items-center">
+    <div class="text-2xl font-bold text-blue-700">
+      <a href="/" class="hover:text-blue-600 transition">Salesforce Tools</a>
+    </div>
+    <ul class="flex space-x-6 text-gray-700 font-medium">
+      <li><a href="/" class="hover:text-blue-600 transition">Home</a></li>
+      <li><a href="/custom" class="hover:text-blue-600 transition">Custom Metadata</a></li>
+      <li><a href="/standard" class="hover:text-blue-600 transition">Standard Metadata</a></li>
+      <li><a href="/upload" class="hover:text-blue-600 transition">Upload Data</a></li>
+    </ul>
+  </nav>
 
-      <div class="flex justify-between items-center">
-        <button type="button" onclick="addUploadSection()"
-          class="text-blue-600 text-sm hover:underline">➕ Add CSV for Object</button>
-        <button type="button" onclick="startMultiUpload()"
-          class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded">
-          🚀 Upload All
-        </button>
+  <!-- Main Layout -->
+  <main class="flex flex-col lg:flex-row h-[calc(100vh-4rem)] gap-4 p-4">
+
+    <!-- Left: Upload Form -->
+    <div class="lg:w-3/5 w-full bg-white shadow-xl rounded-xl p-6 space-y-6 overflow-y-auto">
+      <h1 class="text-2xl font-bold text-gray-800 text-center">Upload Multiple CSVs</h1>
+      <form id="multiUploadForm" class="space-y-6">
+        <div id="uploadSections" class="space-y-6"></div>
+
+        <div class="flex justify-between items-center">
+          <button type="button" onclick="addUploadSection()" class="text-blue-600 text-sm hover:underline">
+            <b>+</b> Add CSV for Object
+          </button>
+          <button type="button" onclick="startMultiUpload()"
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded">
+            Upload All
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right: Upload Progress -->
+    <div class="lg:w-2/5 w-full bg-white shadow-xl rounded-xl p-6 flex flex-col">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Upload Progress</h2>
+      <div id="globalStatus"
+        class="text-sm text-gray-700 whitespace-pre-wrap flex-grow overflow-y-auto bg-gray-50 p-4 rounded border border-gray-200">
+        No uploads yet.
       </div>
-    </form>
-
-    <div id="globalStatus" class="mt-4 text-sm text-gray-700 whitespace-pre-wrap"></div>
-  </div>
+    </div>
+  </main>
 
   <script>
     let sectionCount = 0;
@@ -38,12 +64,14 @@
       section.innerHTML = `
         <div class="flex justify-between items-center">
           <h2 class="text-lg font-semibold text-gray-800">Upload Section ${sectionCount + 1}</h2>
-          <button onclick="this.closest('.upload-block').remove()" class="text-red-500 text-sm">✖ Remove</button>
+          <button onclick="this.closest('.upload-block').remove()" class="text-red-500 text-sm">&times; Remove</button>
         </div>
+
+        <input type="hidden" class="upload-id" value="${sectionCount}" />
 
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-1">Salesforce Object Name</label>
-          <input type="text" name="objectName" placeholder="e.g., Mass_Upload__c"
+          <input value="Mass_Upload__c" type="text" name="objectName" placeholder="e.g., Mass_Upload__c"
             class="w-full border border-gray-300 rounded-lg p-2" />
         </div>
 
@@ -51,12 +79,6 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1">CSV File</label>
           <input type="file" name="csvFile" accept=".csv" class="w-full border border-gray-300 rounded-lg p-2" />
         </div>
-
-        <div class="w-full bg-gray-200 rounded-full h-3">
-          <div class="progress-bar bg-green-500 h-3 rounded-full w-0 transition-all duration-300"></div>
-        </div>
-        <p class="progress-text text-sm text-gray-700 text-right">0%</p>
-        <div class="upload-status text-sm text-gray-700 whitespace-pre-wrap"></div>
       `;
 
       container.appendChild(section);
@@ -66,7 +88,7 @@
     async function startMultiUpload() {
       const blocks = document.querySelectorAll(".upload-block");
       const globalStatus = document.getElementById("globalStatus");
-      globalStatus.textContent = "⏳ Starting uploads...\n";
+      globalStatus.innerHTML = ""; // Clear previous entries
 
       const token = localStorage.getItem("sf_access_token");
       const instance = localStorage.getItem("sf_instance_url");
@@ -80,12 +102,32 @@
         const block = blocks[b];
         const objectName = block.querySelector("input[name='objectName']").value.trim();
         const fileInput = block.querySelector("input[name='csvFile']");
-        const progressBar = block.querySelector(".progress-bar");
-        const progressText = block.querySelector(".progress-text");
-        const statusBox = block.querySelector(".upload-status");
+        const sectionId = block.querySelector(".upload-id").value;
+
+        // Create status element in right panel
+        const statusBlock = document.createElement("div");
+        statusBlock.className = "mb-1 border-b pb-1";
+        statusBlock.innerHTML = `
+          <h3 class="text-sm font-semibold text-gray-800">Upload Section ${parseInt(sectionId) + 1}</h3>
+
+          <div class="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+            <div class="progress-bar absolute top-0 left-0 h-full bg-green-500 w-0 transition-all duration-300 rounded-full"></div>
+          </div>
+          <div class="flex justify-end">
+            <span class="progress-text text-sm text-gray-800">0%</span>
+          </div>
+          <div class="upload-status text-sm text-gray-700 whitespace-pre-wrap"></div>
+        `;
+
+        globalStatus.appendChild(statusBlock);
+
+        const progressBar = statusBlock.querySelector(".progress-bar");
+        const progressText = statusBlock.querySelector(".progress-text");
+        const statusBox = statusBlock.querySelector(".upload-status");
 
         if (!objectName || !fileInput.files.length) {
-          statusBox.textContent = "❌ Object name or file missing.";
+          statusBox.textContent = "Object name or file missing.";
+          progressText.textContent = "Failed";
           continue;
         }
 
@@ -100,11 +142,11 @@
           return record;
         });
 
-        const batchSize = 10;
+        const batchSize = 200;
         const total = records.length;
         let uploaded = 0;
 
-        statusBox.textContent = `⏳ Uploading ${total} records to ${objectName}...\n`;
+        statusBox.textContent = `Uploading ${total} records to ${objectName}\n`;
 
         for (let i = 0; i < total; i += batchSize) {
           const chunk = records.slice(i, i + batchSize);
@@ -126,7 +168,7 @@
 
           if (!res.ok) {
             const err = await res.text();
-            statusBox.textContent += `❌ Error uploading batch starting at ${i + 1}:\n${err}\n`;
+            statusBox.textContent += `Error uploading batch starting at ${i + 1}:\n${err}\n`;
             progressBar.style.width = `0%`;
             progressText.textContent = `Failed`;
             break;
@@ -139,17 +181,17 @@
         }
 
         if (uploaded === total) {
-          statusBox.textContent += `✅ Successfully uploaded ${uploaded} records.`;
+          statusBox.textContent += `Successfully uploaded ${uploaded} records.`;
         }
       }
-
-      globalStatus.textContent += "\n🎉 Upload complete.";
     }
 
     window.onload = () => {
-      addUploadSection(); // start with one block
+      addUploadSection();
     };
   </script>
 </body>
 
 </html>
+
+
