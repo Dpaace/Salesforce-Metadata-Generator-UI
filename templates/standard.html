@@ -47,7 +47,7 @@
         <div class="text-2xl font-bold text-blue-700"><a href="/" class="hover:text-blue-600 transition">Salesforce
                 Tools</a></div>
         <ul class="flex space-x-6 text-gray-700 font-medium">
-            <li><a href="/" class="hover:text-blue-600 transition">Home</a></li>
+            <li><a href="/select" class="hover:text-blue-600 transition">Home</a></li>
             <li><a href="/custom" class="hover:text-blue-600 transition">Custom Metadata</a></li>
             <li><a href="/standard" class="hover:text-blue-600 transition">Standard Metadata</a></li>
             <li><a href="/upload" class="hover:text-blue-600 transition">Upload Data</a></li>
@@ -79,7 +79,7 @@
             <div id="generateSection" class="flex flex-col items-center justify-center h-full">
                 <button id="generateBtn" onclick="downloadZip()"
                     class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-lg flex items-center gap-3">
-                    <span id="generateBtnText">📦 Generate Metadata ZIP</span>
+                    <span id="generateBtnText">Generate Metadata ZIP</span>
                     <svg id="loadingSpinner" class="hidden w-5 h-5 text-white animate-spin"
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
@@ -91,7 +91,7 @@
 
             <!-- Base64 Output Section -->
             <div id="base64Section" class="hidden flex-grow flex flex-col justify-start mt-6">
-                <h2 class="text-lg font-semibold text-gray-800">📦 Base64 Encoded metadata.zip</h2>
+                <h2 class="text-lg font-semibold text-gray-800">Base64 Encoded Value of metadata.zip</h2>
                 <textarea id="base64Text"
                     class="w-full h-64 p-4 border rounded bg-gray-50 text-sm flex-grow resize-none" readonly></textarea>
                 <div class="mt-3 text-center">
@@ -388,10 +388,10 @@
             <button onclick="this.closest('.fieldBlock').remove()" class="absolute top-2 right-2 text-red-500 text-sm">&times;</button>
 
             <label class="block text-sm font-semibold text-gray-700 mb-1">Field Label</label>
-            <input value="Region" type="text" name="label" class="w-full p-2 border rounded" placeholder="e.g., Region" />
+            <input type="text" name="label" class="w-full p-2 border rounded" placeholder="e.g., Region" />
 
             <label class="block text-sm font-semibold text-gray-700 mb-1">Field API Name</label>
-            <input value="Region__c" type="text" name="apiName" class="w-full p-2 border rounded" placeholder="e.g., Region__c" />
+            <input type="text" name="apiName" class="w-full p-2 border rounded" placeholder="e.g., Region__c" />
 
             <label class="block text-sm font-semibold text-gray-700 mb-1">Field Type</label>
             <select name="type" class="field-type w-full p-2 border rounded" onchange="handleFieldTypeChange(this)">
