@@ -113,9 +113,63 @@ def standard():
     return open("templates/standard.html").read()
 
 
+# @app.route("/success")
+# def deploy_success():
+#     return "<h1 style='text-align:center;margin-top:100px;'>🎉 Congrats! Now you can register data.</h1>"
+
+
 @app.route("/success")
 def deploy_success():
-    return "<h1 style='text-align:center;margin-top:100px;'>🎉 Congrats! Now you can register data.</h1>"
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Success</title>
+        <meta http-equiv="refresh" content="3;url=/select">
+        <style>
+            body {
+                background-color: #f0f4f8;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                font-family: system-ui, sans-serif;
+                text-align: center;
+            }
+            h1 {
+                font-size: 2rem;
+                color: #2e7d32;
+                margin-bottom: 20px;
+            }
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border: 4px solid #60a5fa;       /* blue-400 */
+                border-top-color: transparent;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 0 auto;
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            .subtext {
+                font-size: 0.9rem;
+                color: #555;
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>You can now proceed to register the data.</h1>
+            <div class="spinner"></div>
+            <div class="subtext">Redirecting to the selection page...</div>
+        </div>
+    </body>
+    </html>
+    """
 
 
 @app.route("/deploying")

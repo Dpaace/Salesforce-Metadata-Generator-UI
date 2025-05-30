@@ -179,16 +179,16 @@
             const objectHTML = `
               <div class="p-6 border rounded-lg bg-gray-50" id="${objectId}">
                 <div class="flex justify-between items-center mb-4">
-                  <h2 class="text-2xl font-bold">Object ${currentCount}</h2>
+                  <h2 class="text-2xl font-bold">Custom Object ${currentCount}</h2>
                   <button onclick="removeObject(this)" class="text-red-600 hover:text-red-800 text-sm">
                     &times; Remove Object
                   </button>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <input value="Hello" type="text" placeholder="Object Label" class="border p-2 rounded object-label">
-                  <input value="Hello__c" type="text" placeholder="API Name" class="border p-2 rounded object-api">
-                  <input value="Hellos" type="text" placeholder="Plural Label" class="border p-2 rounded object-plural">
+                  <input type="text" placeholder="Object Label" class="border p-2 rounded object-label">
+                  <input type="text" placeholder="API Name" class="border p-2 rounded object-api">
+                  <input type="text" placeholder="Plural Label" class="border p-2 rounded object-plural">
                   <select class="border p-2 rounded object-type hidden">
                     <option value="custom">Custom Object</option>
                     <!-- <option value="standard">Standard Object</option> -->
