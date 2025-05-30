@@ -7,6 +7,134 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md py-4 px-6 flex justify-between items-center">
+        <div class="text-2xl font-bold text-blue-700"><a href="/" class="hover:text-blue-600 transition">Salesforce Tools</a></div>
+        <ul class="flex space-x-6 text-gray-700 font-medium">
+            <li><a href="/" class="hover:text-blue-600 transition">Home</a></li>
+            <li><a href="/custom" class="hover:text-blue-600 transition">Custom Metadata</a></li>
+            <li><a href="/standard" class="hover:text-blue-600 transition">Standard Metadata</a></li>
+            <li><a href="/upload" class="hover:text-blue-600 transition">Upload Data</a></li>
+        </ul>
+    </nav>
+
+    <!-- Deployment Content -->
+    <main class="flex-grow flex items-center justify-center px-4 py-10">
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full space-y-6 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Deploying Metadata to Salesforce...</h1>
+            <div class="animate-spin h-10 w-10 mx-auto border-4 border-blue-600 border-t-transparent rounded-full"></div>
+            <div id="statusText" class="text-lg text-gray-700">Waiting for response...</div>
+
+            <pre id="rawResponse" class="bg-gray-100 p-4 rounded border text-left text-sm overflow-auto max-h-[300px]"></pre>
+
+            <div id="countdown" class="text-3xl font-bold text-green-700 mt-4 hidden"></div>
+        </div>
+    </main>
+
+    <script>
+        const accessToken = localStorage.getItem('sf_access_token');
+        const instanceUrl = localStorage.getItem('sf_instance_url');
+        const zipFile = localStorage.getItem('sf_zip_file');
+
+        if (!accessToken || !instanceUrl || !zipFile) {
+            document.getElementById('statusText').textContent = "Required data missing. Please restart.";
+        } else {
+            startDeployment();
+        }
+
+        async function startDeployment() {
+            const deployRes = await fetch('/deploy-to-salesforce', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_token: accessToken, instance_url: instanceUrl, zip_file: zipFile })
+            });
+
+            const deployText = await deployRes.text();
+            document.getElementById('rawResponse').textContent = formatXML(deployText);
+
+            const deployId = deployText.match(/<id>(.*?)<\/id>/)?.[1];
+            if (!deployId) return document.getElementById('statusText').textContent = "No deployment ID found.";
+
+            pollDeployStatus(deployId);
+        }
+
+        async function pollDeployStatus(deployId) {
+            const statusRes = await fetch('/check-deploy-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_token: accessToken, instance_url: instanceUrl, deploy_id: deployId })
+            });
+
+            const text = await statusRes.text();
+            const status = text.match(/<status>(.*?)<\/status>/)?.[1] || 'Unknown';
+
+            document.getElementById('statusText').textContent = `Deployment Status: ${status}`;
+            document.getElementById('rawResponse').textContent = formatXML(text);
+
+            if (status === 'Succeeded') {
+                countdownToRedirect();
+            } else if (text.includes('<done>true</done>')) {
+                document.getElementById('statusText').textContent = `Deployment ended with status: ${status}`;
+            } else {
+                setTimeout(() => pollDeployStatus(deployId), 4000);
+            }
+        }
+
+        function formatXML(xmlString) {
+            const PADDING = '  ';
+            const reg = /(>)(<)(\/*)/g;
+            let formatted = '';
+            let pad = 0;
+
+            xmlString = xmlString.replace(reg, '$1\r\n$2$3');
+            xmlString.split('\r\n').forEach((node) => {
+                let indent = 0;
+                if (node.match(/.+<\/\w[^>]*>$/)) {
+                    indent = 0;
+                } else if (node.match(/^<\/\w/)) {
+                    pad -= 1;
+                } else if (node.match(/^<\w([^>]*[^/])?>.*$/)) {
+                    indent = 1;
+                }
+
+                formatted += PADDING.repeat(pad) + node + '\r\n';
+                pad += indent;
+            });
+
+            return formatted;
+        }
+
+        function countdownToRedirect() {
+            let count = 5;
+            const counter = document.getElementById('countdown');
+            counter.classList.remove('hidden');
+
+            const interval = setInterval(() => {
+                counter.textContent = `Redirecting in ${count}...`;
+                if (count === 0) {
+                    clearInterval(interval);
+                    window.location.href = '/success';
+                }
+                count--;
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Deploying Metadata...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
     <div class="text-center space-y-6">
         <h1 class="text-2xl font-bold">🚀 Deploying Metadata to Salesforce...</h1>
@@ -112,4 +240,4 @@
     </script>
 </body>
 
-</html>
+</html> -->
