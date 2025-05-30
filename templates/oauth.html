@@ -7,52 +7,62 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gray-800 min-h-screen p-8">
-    <div class="max-w-xl mx-auto bg-gray-600 p-8 rounded-xl shadow-md">
-        <h1 class="text-2xl font-bold mb-6 text-center">Salesforce Access Token Generator</h1>
+<body class="bg-gray-300 min-h-screen p-8">
+    <div class="max-w-4xl h-fit mx-auto bg-white p-8 rounded-xl shadow-lg mt-40">
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Salesforce Access Token Generator</h1>
 
-        <div class="space-y-4">
-            <input id="clientId" type="text" placeholder="Client ID" class="border p-2 w-full rounded">
+        <div class="space-y-5">
+            <input id="clientId" type="text" placeholder="Enter your Salesforce Client ID"
+                value="3MVG9WVXk15qiz1K_RqS7rc_whjm5ERUuo6UZ9Yy8HRZ4is.jqzcHdmR0QrZptu9DTSIJqLgqsYyRl6KD4AUK"
+                class="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             <input id="redirectUri" type="hidden" value="{{ redirect_uri }}">
-            <input id="authCode" type="text" placeholder="Paste Decoded Authorization Code Here"
-                class="border p-2 w-full rounded">
+            <input readonly id="authCode" type="text" placeholder="Authorization Code"
+                class="border border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
         <div class="flex flex-wrap gap-4 mt-6 justify-center">
-            <button onclick="openAuthWindow()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+            <button onclick="openAuthWindow()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold">
                 Get Authorization Code
             </button>
-            <button onclick="getAccessToken()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+            <button onclick="getAccessToken()"
+                class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold">
                 Get Access Token
             </button>
         </div>
     </div>
+
     <!-- Access Token Modal -->
     <div id="tokenModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-xl shadow-xl">
-            <h2 class="text-xl font-bold mb-4">Access Token</h2>
-            <textarea id="tokenOutput" class="w-full h-40 border p-3 rounded font-mono text-sm" readonly></textarea>
+        <div class="bg-white rounded-xl p-6 w-full max-w-4xl shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Access Token</h2>
+                <button onclick="closeModal()"
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium">
+                    &times;
+                </button>
+            </div>
+            <textarea id="tokenOutput" class="w-full h-40 border p-3 rounded-lg font-mono text-sm text-gray-700"
+                readonly></textarea>
             <div class="flex justify-end mt-4 gap-4">
-                <button onclick="copyToken()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                <!-- <button onclick="copyToken()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
                     Copy to Clipboard
-                </button>
-                <button onclick="closeModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
-                    Close
-                </button>
-                <button onclick="goToMetadata()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
+                </button> -->
+
+                <button onclick="goToMetadata()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium">
                     Proceed to Metadata Generator →
                 </button>
             </div>
         </div>
     </div>
 
-
     <script>
         function openAuthWindow() {
             const clientId = document.getElementById('clientId').value.trim();
             const redirectUri = document.getElementById('redirectUri').value.trim();
             if (!clientId || !redirectUri) {
-                alert('Please enter Client ID.');
+                alert('Please enter the Client ID');
                 return;
             }
 
@@ -82,25 +92,22 @@
             const data = await response.json();
 
             if (data.access_token) {
-                console.log(data);
                 document.getElementById('tokenOutput').value = data.access_token;
 
-                // 🧠 Store in localStorage for later use
                 localStorage.setItem('sf_access_token', data.access_token);
                 localStorage.setItem('sf_instance_url', data.instance_url);
 
                 document.getElementById('tokenModal').classList.remove('hidden');
             } else {
-                alert('❌ Failed to get token:\n\n' + JSON.stringify(data, null, 2));
+                alert('Failed to retrieve access token:\n\n' + "Ensure the Client ID and Authorization Code are correct.");
             }
-
         }
 
         function copyToken() {
             const token = document.getElementById('tokenOutput').value;
             navigator.clipboard.writeText(token)
-                .then(() => alert('✅ Token copied to clipboard!'))
-                .catch(err => alert('❌ Failed to copy token'));
+                .then(() => alert('Token copied to clipboard.'))
+                .catch(() => alert('Could not copy token.'));
         }
 
         function closeModal() {
@@ -112,16 +119,14 @@
 
             if (message?.type === 'SF_AUTH_CODE') {
                 document.getElementById('authCode').value = message.code;
-                alert('✅ Authorization code fetched successfully!');
+                alert('Authorization code received.');
                 document.getElementById('authCode').focus();
             }
         });
 
         function goToMetadata() {
-            window.location.href = '/select'; // or 'index.html' or any route you use for the generator
+            window.location.href = '/select';
         }
-
-
     </script>
 </body>
 

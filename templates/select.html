@@ -7,6 +7,78 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md py-4 px-6 flex justify-between items-center">
+        <div class="text-2xl font-bold text-blue-700">🔧 Salesforce Tools</div>
+        <ul class="flex space-x-6 text-gray-700 font-medium">
+            <li><a href="/" class="hover:text-blue-600 transition">Home</a></li>
+            <li><a href="/custom" class="hover:text-blue-600 transition">Custom Metadata</a></li>
+            <li><a href="/standard" class="hover:text-blue-600 transition">Standard Metadata</a></li>
+            <li><a href="/upload" class="hover:text-blue-600 transition">Upload Data</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Section -->
+    <main class="flex-grow flex items-center justify-center p-10">
+        <div class="w-full max-w-6xl">
+            <h1 class="text-4xl font-bold text-center text-gray-800 mb-12">Salesforce Metadata Builder</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Custom Object Card -->
+                <div class="bg-white shadow-lg rounded-2xl p-6 text-center space-y-4">
+                    <div class="text-5xl">🧱</div>
+                    <h2 class="text-xl font-semibold text-gray-800">Custom Object Metadata</h2>
+                    <p class="text-gray-600 text-sm">Create new custom objects along with fields, layouts, and tabs for
+                        your Salesforce org.</p>
+                    <a href="/custom"
+                        class="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg transition duration-200">
+                        Custom Object
+                    </a>
+                </div>
+
+                <!-- Standard Object Card -->
+                <div class="bg-white shadow-lg rounded-2xl p-6 text-center space-y-4">
+                    <div class="text-5xl">🧩</div>
+                    <h2 class="text-xl font-semibold text-gray-800">Standard Object Metadata</h2>
+                    <p class="text-gray-600 text-sm">Extend Salesforce standard objects like Account or Contact by
+                        adding custom fields and layouts.</p>
+                    <a href="/standard"
+                        class="inline-block mt-4 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded-lg transition duration-200">
+                        Standard Object
+                    </a>
+                </div>
+
+                <!-- Upload Data Card -->
+                <div class="bg-white shadow-lg rounded-2xl p-6 text-center space-y-4">
+                    <div class="text-5xl">📤</div>
+                    <h2 class="text-xl font-semibold text-gray-800">Upload CSV Data</h2>
+                    <p class="text-gray-600 text-sm">Upload and import test data into Salesforce objects using a simple
+                        and guided interface.</p>
+                    <a href="/upload"
+                        class="inline-block mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-5 rounded-lg transition duration-200">
+                        Upload Data
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
+
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Select Metadata Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white shadow-xl rounded-2xl p-10 max-w-xl text-center space-y-6">
         <h1 class="text-3xl font-bold text-gray-800">Salesforce Metadata Builder</h1>
@@ -30,4 +102,4 @@
     </div>
 </body>
 
-</html>
+</html> -->
