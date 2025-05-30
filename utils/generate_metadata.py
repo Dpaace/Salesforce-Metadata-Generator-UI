@@ -70,18 +70,7 @@ def create_metadata_folder(base_path, objects, access_token=None, instance_url=N
                 f.write(generate_tab_xml(label, api))
         else:
             # Treat as standard object (e.g., Account, Contact)
-            for field in fields:
-                field_name = field['apiName'] or field['label'].replace(' ', '_') + '__c'
-                standard_fields.append({
-                    'object': api,
-                    'field': field_name,
-                    'label': field['label'],
-                    'type': field['type']
-                })
-
-                # Create field-meta.xml file
-                with open(os.path.join(fields_folder, f"{api}.{field_name}.field-meta.xml"), 'w') as f:
-                    f.write(generate_custom_field_xml(field_name, field['label'], field['type']))
+            print("Object is standard, skipping object creation.")
 
     # Write profile
     with open(os.path.join(profile_folder, "Admin.profile-meta.xml"), 'w') as f:

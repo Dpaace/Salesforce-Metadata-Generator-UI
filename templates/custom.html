@@ -69,13 +69,13 @@
                   </button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <input type="text" placeholder="Object Label" class="border p-2 rounded object-label">
                   <input type="text" placeholder="API Name" class="border p-2 rounded object-api">
                   <input type="text" placeholder="Plural Label" class="border p-2 rounded object-plural">
-                  <select class="border p-2 rounded object-type" onchange="togglePlural(this)">
+                  <select class="border p-2 rounded object-type hidden">
                     <option value="custom">Custom Object</option>
-                    <option value="standard">Standard Object</option>
+                    <!-- <option value="standard">Standard Object</option> -->
                   </select>
                 </div>
 
@@ -92,24 +92,12 @@
             container.insertAdjacentHTML('beforeend', objectHTML);
         }
 
-        function togglePlural(select) {
-            const container = select.closest('[id^="object-"]');
-            const pluralInput = container.querySelector('.object-plural');
-            if (select.value === 'standard') {
-                pluralInput.disabled = true;
-                pluralInput.placeholder = 'N/A for standard object';
-                pluralInput.value = '';
-            } else {
-                pluralInput.disabled = false;
-                pluralInput.placeholder = 'Plural Label';
-            }
-        }
-
         function addField(button) {
             const fieldsContainer = button.previousElementSibling;
             const fieldHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center field-row">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center field-row">
                     <input type="text" placeholder="Field Label" class="border p-2 rounded field-label">
+                    <input type="text" placeholder="API Name (optional)" class="border p-2 rounded field-api">
                     <select class="border p-2 rounded field-type">
                         <option value="Text">Text</option>
                         <!-- <option value="Number">Number</option> -->
@@ -117,12 +105,7 @@
                         <!-- <option value="Picklist">Picklist</option> -->
                         <!-- <option value="Checkbox">Checkbox</option> -->
                     </select>
-                    <input type="text" placeholder="API Name (optional)" class="border p-2 rounded field-api">
-                    <select class="border p-2 rounded field-required">
-                        <option value="false">Optional</option>
-                        <option value="true">Required</option>
-                    </select>
-                    <button onclick="removeField(this)" class="text-red-600 hover:text-red-800 text-sm">✖</button>
+                    <button onclick="removeField(this)" class="text-red-600 hover:text-red-800 text-sm">✖ Remove Field</button>
                 </div>
             `;
             fieldsContainer.insertAdjacentHTML('beforeend', fieldHTML);
@@ -178,7 +161,6 @@
                     const label = row.querySelector('.field-label').value.trim();
                     const type = row.querySelector('.field-type').value;
                     const apiName = row.querySelector('.field-api').value.trim();
-                    const required = row.querySelector('.field-required').value === 'true';
 
                     if (!label) {
                         alert('Each field must have a label.');
@@ -189,7 +171,6 @@
                         label,
                         type,
                         apiName,
-                        required
                     });
                 }
 
