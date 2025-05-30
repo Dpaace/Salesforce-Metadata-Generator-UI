@@ -1,0 +1,6 @@
+Name,Phone,Website,Industry,NumberOfEmployees,BillingStreet,BillingCity,BillingState,BillingPostalCode,BillingCountry,Active__c,CustomerPriority__c,NumberofLocations__c,UpsellOpportunity__c
+Company 1,(897) 759-2808,http://www.company1.com,Education,955,623 Main St,St. Paul,TX,65425,USA,Yes,Medium,2,Yes
+Company 2,(798) 723-4863,http://www.company2.com,Education,1075,493 Main St,New York,FL,20811,USA,No,Medium,17,Yes
+Company 3,(425) 611-8135,http://www.company3.com,Education,1516,713 Main St,Austin,TX,56979,USA,Yes,Low,3,No
+Company 4,(793) 126-2169,http://www.company4.com,Technology,2522,449 Main St,New York,CA,42336,USA,Yes,Medium,9,Yes
+Company 5,(920) 318-2677,http://www.company5.com,Healthcare,2771,417 Main St,Miami,CA,91047,USA,Yes,Medium,7,No
