@@ -20,76 +20,11 @@ REDIRECT_URI = f"http://localhost:{PORT}/redirect.html"
 app = Flask(__name__)
 
 
-@app.route("/generate", methods=["POST"])
-def generate_metadata():
-    # objects = request.get_json()
-    # session_id = str(uuid.uuid4())
-    # base_folder = f'metadata/{session_id}'
-    # os.makedirs(base_folder, exist_ok=True)
-    # create_metadata_folder(base_folder, objects)
-
-    payload = request.get_json()
-    objects = payload.get("objects")
-    access_token = payload.get("access_token")
-    instance_url = payload.get("instance_url")
-
-    session_id = str(uuid.uuid4())
-    base_folder = f"metadata/{session_id}"
-    os.makedirs(base_folder, exist_ok=True)
-
-    # Pass tokens to create_metadata_folder
-    create_metadata_folder(base_folder, objects, access_token, instance_url)
-
-    zip_path = f"{base_folder}.zip"
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for root, _, files in os.walk(base_folder):
-            for file in files:
-                filepath = os.path.join(root, file)
-                arcname = os.path.relpath(filepath, base_folder)
-                zipf.write(filepath, arcname)
-
-    shutil.rmtree(base_folder)
-
-    return send_file(zip_path, as_attachment=True)
-
-
-@app.route("/generate-standard-zip", methods=["POST"])
-def generate_standard_zip():
-    data = request.get_json()
-    objects = data.get("objects")
-    access_token = data.get("access_token")
-    instance_url = data.get("instance_url")
-
-    if not all([objects, access_token, instance_url]):
-        return jsonify({"error": "Missing required fields"}), 400
-
-    session_id = str(uuid.uuid4())
-    base_folder = f"standardmetadata/{session_id}"
-    os.makedirs(base_folder, exist_ok=True)
-
-    try:
-        create_standard_metadata_folder(
-            base_folder, objects, access_token, instance_url
-        )
-    except Exception as e:
-        return jsonify({"error": f"Metadata generation failed: {str(e)}"}), 500
-
-    zip_path = f"standardmetadata_{session_id}.zip"
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for root, _, files in os.walk(base_folder):
-            for file in files:
-                filepath = os.path.join(root, file)
-                arcname = os.path.relpath(filepath, base_folder)
-                zipf.write(filepath, arcname)
-
-    return send_file(zip_path, as_attachment=True)
-
 
 @app.route("/")
 def oauth():
     with open("templates/oauth.html") as f:
         html = f.read()
-    # Inject the redirect_uri directly into the template
     return render_template_string(html, redirect_uri=REDIRECT_URI)
 
 
@@ -111,11 +46,6 @@ def index():
 @app.route("/standard")
 def standard():
     return open("templates/standard.html").read()
-
-
-# @app.route("/success")
-# def deploy_success():
-#     return "<h1 style='text-align:center;margin-top:100px;'>🎉 Congrats! Now you can register data.</h1>"
 
 
 @app.route("/success")
@@ -182,29 +112,64 @@ def upload_page():
     return open("templates/upload.html").read()
 
 
-@app.route("/upload-csv", methods=["POST"])
-def upload_csv_batch():
+@app.route("/generate", methods=["POST"])
+def generate_metadata():
+
+    payload = request.get_json()
+    objects = payload.get("objects")
+    access_token = payload.get("access_token")
+    instance_url = payload.get("instance_url")
+
+    session_id = str(uuid.uuid4())
+    base_folder = f"metadata/{session_id}"
+    os.makedirs(base_folder, exist_ok=True)
+
+    # Pass tokens to create_metadata_folder
+    create_metadata_folder(base_folder, objects, access_token, instance_url)
+
+    zip_path = f"{base_folder}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(base_folder):
+            for file in files:
+                filepath = os.path.join(root, file)
+                arcname = os.path.relpath(filepath, base_folder)
+                zipf.write(filepath, arcname)
+
+    shutil.rmtree(base_folder)
+
+    return send_file(zip_path, as_attachment=True)
+
+
+@app.route("/generate-standard-zip", methods=["POST"])
+def generate_standard_zip():
     data = request.get_json()
+    objects = data.get("objects")
     access_token = data.get("access_token")
     instance_url = data.get("instance_url")
-    object_name = data.get("object_name")
-    records = data.get("records", [])
 
-    if not all([access_token, instance_url, object_name, records]):
-        return "Missing data", 400
+    if not all([objects, access_token, instance_url]):
+        return jsonify({"error": "Missing required fields"}), 400
 
-    url = f"{instance_url}/services/data/v63.0/composite/tree/{object_name}/"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json",
-    }
+    session_id = str(uuid.uuid4())
+    base_folder = f"standardmetadata/{session_id}"
+    os.makedirs(base_folder, exist_ok=True)
 
-    response = requests.post(url, headers=headers, json={"records": records})
+    try:
+        create_standard_metadata_folder(
+            base_folder, objects, access_token, instance_url
+        )
+    except Exception as e:
+        return jsonify({"error": f"Metadata generation failed: {str(e)}"}), 500
 
-    if response.status_code in [200, 201] and not response.json().get("hasErrors"):
-        return "Success"
-    else:
-        return response.text, 500
+    zip_path = f"standardmetadata_{session_id}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(base_folder):
+            for file in files:
+                filepath = os.path.join(root, file)
+                arcname = os.path.relpath(filepath, base_folder)
+                zipf.write(filepath, arcname)
+
+    return send_file(zip_path, as_attachment=True)
 
 
 @app.route("/exchange-token", methods=["POST"])
@@ -354,24 +319,6 @@ def merge_fields_into_layout(layout_xml: str, field_api_names: list[str]) -> str
     )
 
 
-# def generate_object_file(object_name: str, field_api_name: str, label: str) -> str:
-#     return f"""<?xml version="1.0" encoding="UTF-8"?>
-# <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-#     <fields>
-#         <fullName>{field_api_name}</fullName>
-#         <externalId>false</externalId>
-#         <label>{label}</label>
-#         <required>false</required>
-#         <trackHistory>false</trackHistory>
-#         <trackTrending>false</trackTrending>
-#         <type>Text</type>
-#         <length>255</length>
-#     </fields>
-#     <deploymentStatus>Deployed</deploymentStatus>
-#     <sharingModel>ReadWrite</sharingModel>
-# </CustomObject>"""
-
-
 def generate_object_file(object_name: str, fields: list[dict]) -> str:
     def build_field_block(field: dict) -> str:
         base = f"""    <fields>
@@ -479,6 +426,30 @@ def generate_profile_xml(
 <Profile xmlns="http://soap.sforce.com/2006/04/metadata">
 {permissions}
 </Profile>"""
+
+@app.route("/upload-csv", methods=["POST"])
+def upload_csv_batch():
+    data = request.get_json()
+    access_token = data.get("access_token")
+    instance_url = data.get("instance_url")
+    object_name = data.get("object_name")
+    records = data.get("records", [])
+
+    if not all([access_token, instance_url, object_name, records]):
+        return "Missing data", 400
+
+    url = f"{instance_url}/services/data/v63.0/composite/tree/{object_name}/"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(url, headers=headers, json={"records": records})
+
+    if response.status_code in [200, 201] and not response.json().get("hasErrors"):
+        return "Success"
+    else:
+        return response.text, 500
 
 
 @app.route("/append-field", methods=["POST"])

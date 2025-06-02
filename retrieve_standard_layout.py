@@ -141,20 +141,20 @@ def extract_layout_from_response(xml_response, target_file_keyword='Layout'):
 #         status_response = check_retrieve_status(access_token, instance_url, retrieve_id)
 #         layout_xml = extract_layout_from_response(status_response)
 #         if layout_xml:
-#             print("✅ Layout XML retrieved.")
+#             print("Layout XML retrieved.")
 #             break
 #     except Exception as e:
 #         print(str(e))
 #         break
 #     time.sleep(WAIT_SECONDS)
 # else:
-#     raise TimeoutError("❌ Retrieval timed out.")
+#     raise TimeoutError("Retrieval timed out.")
 
 # # output_file = layout_full_name.replace(" ", "_") + ".layout-meta.xml"
 # output_file = layout_full_name + ".layout"
 # with open(output_file, "w", encoding="utf-8") as f:
 #     f.write(layout_xml)
 
-# print(f"✅ Layout saved to: {output_file}")
-# print("\n📄 Preview (first 500 characters):")
+# print(f"Layout saved to: {output_file}")
+# print("\nPreview (first 500 characters):")
 # print(layout_xml[:500])

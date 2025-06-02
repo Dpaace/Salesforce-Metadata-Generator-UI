@@ -117,12 +117,9 @@ def extract_layout_from_response(xml_response, target_file_keyword='Layout'):
 
     raise Exception(" Layout XML not found in the retrieved ZIP.")
 
-
 # -----------------------------------------
 # MERGE
 # -----------------------------------------
-
-
 def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
     import xml.etree.ElementTree as ET
     
@@ -178,61 +175,61 @@ def generate_layout_xml(object_api_name, fields, existing_layout_xml=None):
 # -----------------------------------------
 # MAIN EXECUTION
 # -----------------------------------------
-if __name__ == "__main__":
-    access_token = '00DdM00000B48zI!AQEAQFwJnM6PGhTQs_fTdeswxdcfZTnszDe6GBb4Fn8LzXgdh6oaWMpLpo_1w5K4.Db9f6oX3ZeYYXqTxSk3B.vMqTo9VT1b'
-    instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'
-    layout_full_name = 'Account-Account Layout'  # e.g., 'Custom_Object__c-Custom_Object Layout'
-    # layout_full_name = 'Mass_Upload__c-Mass Upload Layout'
-    # layout_full_name = 'Case-Case Layout'
+# if __name__ == "__main__":
+#     access_token = '00DdM00000B48zI!AQEAQFwJnM6PGhTQs_fTdeswxdcfZTnszDe6GBb4Fn8LzXgdh6oaWMpLpo_1w5K4.Db9f6oX3ZeYYXqTxSk3B.vMqTo9VT1b'
+#     instance_url = 'https://ssadminlearn123-dev-ed.develop.my.salesforce.com'
+#     layout_full_name = 'Account-Account Layout'  # e.g., 'Custom_Object__c-Custom_Object Layout'
+#     # layout_full_name = 'Mass_Upload__c-Mass Upload Layout'
+#     # layout_full_name = 'Case-Case Layout'
     
-    print("[*] Starting layout retrieval...")
-    try:
-        retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
-        print(f"[+] Retrieve request ID: {retrieve_id}")
-    except Exception as e:
-        print(f"Failed to start retrieve: {str(e)}")
-        exit(1)
+#     print("[*] Starting layout retrieval...")
+#     try:
+#         retrieve_id = retrieve_layout_metadata(access_token, instance_url, layout_full_name)
+#         print(f"[+] Retrieve request ID: {retrieve_id}")
+#     except Exception as e:
+#         print(f"Failed to start retrieve: {str(e)}")
+#         exit(1)
 
-    # Polling loop
-    MAX_ATTEMPTS = 10
-    WAIT_SECONDS = 3
+#     # Polling loop
+#     MAX_ATTEMPTS = 10
+#     WAIT_SECONDS = 3
 
-    for attempt in range(MAX_ATTEMPTS):
-        print(f"Polling attempt {attempt + 1}...")
-        try:
-            status_response = check_retrieve_status(access_token, instance_url, retrieve_id)
-            layout_xml = extract_layout_from_response(status_response)
-            if layout_xml:
-                print("Layout XML retrieved successfully.")
-                print(layout_xml[:1000])  # preview first 1000 chars
-                break
-        except Exception as e:
-            print(str(e))
-            break
+#     for attempt in range(MAX_ATTEMPTS):
+#         print(f"Polling attempt {attempt + 1}...")
+#         try:
+#             status_response = check_retrieve_status(access_token, instance_url, retrieve_id)
+#             layout_xml = extract_layout_from_response(status_response)
+#             if layout_xml:
+#                 print("Layout XML retrieved successfully.")
+#                 print(layout_xml[:1000])  # preview first 1000 chars
+#                 break
+#         except Exception as e:
+#             print(str(e))
+#             break
 
-        print(f"Not ready yet. Sleeping {WAIT_SECONDS} seconds...\n")
-        time.sleep(WAIT_SECONDS)
-    else:
-        print("Retrieval timed out after multiple attempts.")
+#         print(f"Not ready yet. Sleeping {WAIT_SECONDS} seconds...\n")
+#         time.sleep(WAIT_SECONDS)
+#     else:
+#         print("Retrieval timed out after multiple attempts.")
         
-    # Define new fields you want to add
-    new_fields = [
-        {'apiName': 'Today__c'}
-    ]
+#     # Define new fields you want to add
+#     new_fields = [
+#         {'apiName': 'Today__c'}
+#     ]
 
-    if layout_xml:
-        print("[*] Merging new fields into layout...")
-        final_xml = generate_layout_xml("Account", new_fields, existing_layout_xml=layout_xml)
-    else:
-        print("[*] No existing layout found. Generating new layout XML...")
-        final_xml = generate_layout_xml("Account", new_fields, existing_layout_xml=None)
+#     if layout_xml:
+#         print("[*] Merging new fields into layout...")
+#         final_xml = generate_layout_xml("Account", new_fields, existing_layout_xml=layout_xml)
+#     else:
+#         print("[*] No existing layout found. Generating new layout XML...")
+#         final_xml = generate_layout_xml("Account", new_fields, existing_layout_xml=None)
 
-    # Save the merged layout XML to a file
-    output_file = f"{layout_full_name}.layout-meta.xml"
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(final_xml)
+#     # Save the merged layout XML to a file
+#     output_file = f"{layout_full_name}.layout-meta.xml"
+#     with open(output_file, "w", encoding="utf-8") as f:
+#         f.write(final_xml)
 
-    print(f"\nFinal layout XML written to: {output_file}")
+#     print(f"\nFinal layout XML written to: {output_file}")
 
 
 

@@ -32,15 +32,12 @@ def create_metadata_folder(base_path, objects, access_token=None, instance_url=N
             with open(os.path.join(object_folder, f"{api}.object"), 'w') as f:
                 f.write(generate_object_xml(label, plural, api, fields))
 
-            # Create layout
-            # with open(os.path.join(layout_folder, f"{api}-{label} Layout.layout"), 'w') as f:
-            #     f.write(generate_layout_xml(api, fields))
-            
+
             from retrieve_layout import (
                 retrieve_layout_metadata,
                 check_retrieve_status,
                 extract_layout_from_response,
-                generate_layout_xml  # Make sure to import this updated version
+                generate_layout_xml 
             )
             import time
 
@@ -198,7 +195,6 @@ def generate_profile_xml(custom_object_apis, custom_objects, standard_fields):
     {permissions}
     {object_access}
 </Profile>"""
-
 
 
 def generate_custom_field_xml(field_name, label, field_type):
