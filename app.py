@@ -16,7 +16,9 @@ from retrieve_standard_layout import (
 import time
 
 PORT = 5000
-REDIRECT_URI = f"http://localhost:{PORT}/redirect.html"
+# REDIRECT_URI = f"http://localhost:{PORT}/redirect.html"
+REDIRECT_URI = "https://salesforce-metadata-generator-ui.onrender.com/redirect.html"
+
 app = Flask(__name__)
 
 
