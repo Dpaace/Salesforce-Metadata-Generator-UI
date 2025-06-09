@@ -607,5 +607,12 @@ def append_field():
         return jsonify({"error": str(e)}), 500
 
 
+# if __name__ == "__main__":
+#     app.run(debug=True, host="localhost", port=PORT)
+    
+    
 if __name__ == "__main__":
-    app.run(debug=True, host="localhost", port=PORT)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
+
